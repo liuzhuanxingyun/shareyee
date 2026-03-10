@@ -323,6 +323,163 @@
     }
     .news-dt  { font-size: .68rem; color: var(--muted); margin-top: 12px; }
 
+    /* ── Section 3 · Interests ─────────────────────────────────── */
+    #interests {
+      padding: 72px 0 80px;
+      border-top: 1px solid var(--border-2);
+    }
+
+    .interest-grid {
+      display: grid;
+      grid-template-columns: minmax(280px, 360px) 1fr;
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .interest-card {
+      background: var(--surface);
+      border: 1px solid var(--border-2);
+      border-radius: 18px;
+      padding: 20px;
+    }
+
+    .interest-head {
+      font-size: .95rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .interest-sub {
+      color: var(--muted);
+      font-size: .78rem;
+      margin-bottom: 14px;
+      line-height: 1.6;
+    }
+
+    .music-cover {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      border-radius: 14px;
+      border: 1px solid var(--border-2);
+      background:
+        radial-gradient(circle at 20% 20%, rgba(129,140,248,.45), transparent 45%),
+        radial-gradient(circle at 80% 70%, rgba(56,189,248,.35), transparent 42%),
+        linear-gradient(135deg, rgba(255,255,255,.07), rgba(255,255,255,.02));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      margin-bottom: 14px;
+    }
+
+    .music-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+      color: var(--text-2);
+      font-size: .74rem;
+    }
+
+    .music-title {
+      font-size: .85rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+
+    audio {
+      width: 100%;
+      border-radius: 10px;
+      filter: hue-rotate(6deg) saturate(1.1);
+    }
+
+    .travel-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .visit-count {
+      font-size: .74rem;
+      color: var(--text-2);
+      background: rgba(129,140,248,.1);
+      border: 1px solid rgba(129,140,248,.25);
+      border-radius: 999px;
+      padding: 4px 10px;
+    }
+
+    .map-wrap {
+      width: 100%;
+      overflow: hidden;
+      border-radius: 14px;
+      border: 1px solid var(--border-2);
+      background:
+        linear-gradient(180deg, rgba(8,47,73,.4), rgba(15,23,42,.35)),
+        repeating-linear-gradient(0deg, transparent 0, transparent 26px, rgba(255,255,255,.025) 27px, transparent 28px),
+        repeating-linear-gradient(90deg, transparent 0, transparent 26px, rgba(255,255,255,.025) 27px, transparent 28px);
+      padding: 10px;
+    }
+
+    .travel-map {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .map-city {
+      fill: #94a3b8;
+      stroke: rgba(255,255,255,.6);
+      stroke-width: 1;
+      transition: fill .2s, transform .2s;
+      transform-origin: center;
+      cursor: pointer;
+    }
+
+    .map-city.visited {
+      fill: #22d3ee;
+      filter: drop-shadow(0 0 4px rgba(34,211,238,.65));
+    }
+
+    .map-city:hover {
+      transform: scale(1.18);
+      fill: #60a5fa;
+    }
+
+    .map-link {
+      stroke: rgba(96,165,250,.45);
+      stroke-width: 2;
+      fill: none;
+      stroke-dasharray: 5 5;
+    }
+
+    .map-label {
+      fill: #cbd5e1;
+      font-size: 11px;
+      font-weight: 600;
+      pointer-events: none;
+      text-shadow: 0 1px 0 rgba(0,0,0,.5);
+    }
+
+    .city-list {
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .city-chip {
+      font-size: .72rem;
+      color: var(--text-2);
+      border: 1px solid var(--border-2);
+      border-radius: 999px;
+      padding: 4px 10px;
+      background: rgba(255,255,255,.03);
+    }
+
     /* ── Footer ──────────────────────────────────────────────────── */
     footer {
       border-top: 1px solid var(--border-2);
@@ -336,6 +493,7 @@
       .profile-card      { position: static; }
       .summary-grid      { grid-template-columns: repeat(2,1fr); }
       .news-grid         { grid-template-columns: 1fr; }
+      .interest-grid     { grid-template-columns: 1fr; }
       .s-title           { font-size: 1.7rem; }
       .dash-header       { flex-direction: column; align-items: flex-start; }
     }
@@ -353,6 +511,7 @@
     <div class="nav-links">
       <a href="#about">个人介绍</a>
       <a href="#investment">投资看板</a>
+      <a href="#interests">兴趣板块</a>
     </div>
   </div>
 </nav>
@@ -496,6 +655,48 @@
       <div class="news-card"><div class="skel" style="width:100%;height:100px"></div></div>
       <div class="news-card"><div class="skel" style="width:100%;height:100px"></div></div>
       <div class="news-card"><div class="skel" style="width:100%;height:100px"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Section 3 · Interests ──────────────────────────────────── -->
+<section id="interests">
+  <div class="container">
+    <div class="s-label">Interests</div>
+    <div class="s-title">音乐与<span>旅行</span></div>
+    <div class="s-desc">一首用 Logic Pro 做的小作品，以及走过城市的旅行轨迹。地图上的城市点可点击切换亮灭状态。</div>
+
+    <div class="interest-grid">
+      <div class="interest-card">
+        <div class="interest-head">Logic Pro 小样</div>
+        <div class="interest-sub">自己编排和混音的一段旋律，记录一次从 0 到 1 的音乐尝试。</div>
+        <div class="music-cover" aria-hidden="true">🎧</div>
+        <div class="music-title">Track: logic-pro-song.mp3</div>
+        <div class="music-meta">
+          <span>DAW: Logic Pro</span>
+          <span>类型: Demo</span>
+        </div>
+        <audio controls preload="none">
+          <source src="assets/music/logic-pro-song.mp3" type="audio/mpeg" />
+          你的浏览器暂不支持音频播放，请更新浏览器后重试。
+        </audio>
+      </div>
+
+      <div class="interest-card">
+        <div class="travel-top">
+          <div>
+            <div class="interest-head">旅行地图</div>
+            <div class="interest-sub">已点亮城市：北京、汕头、潮州、佛山、万宁、海口、阳江、肇庆、香港、清远、深圳、广州。</div>
+          </div>
+          <div class="visit-count" id="visit-count">已点亮 0 / 0</div>
+        </div>
+
+        <div class="map-wrap">
+          <svg class="travel-map" id="travel-map" viewBox="0 0 760 500" role="img" aria-label="旅行城市地图"></svg>
+        </div>
+
+        <div class="city-list" id="city-list"></div>
+      </div>
     </div>
   </div>
 </section>
@@ -668,6 +869,88 @@
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
+  /* ── Interests map ────────────────────────────────────────────── */
+  const TRAVEL_CITIES = [
+    { name: '北京', x: 430, y: 110, visited: true },
+    { name: '汕头', x: 505, y: 325, visited: true },
+    { name: '潮州', x: 492, y: 315, visited: true },
+    { name: '佛山', x: 450, y: 300, visited: true },
+    { name: '万宁', x: 442, y: 405, visited: true },
+    { name: '海口', x: 418, y: 388, visited: true },
+    { name: '阳江', x: 420, y: 322, visited: true },
+    { name: '肇庆', x: 435, y: 288, visited: true },
+    { name: '香港', x: 473, y: 312, visited: true },
+    { name: '清远', x: 450, y: 272, visited: true },
+    { name: '深圳', x: 465, y: 308, visited: true },
+    { name: '广州', x: 456, y: 296, visited: true },
+  ];
+
+  function renderTravelMap() {
+    const map = document.getElementById('travel-map');
+    const list = document.getElementById('city-list');
+    const countEl = document.getElementById('visit-count');
+    if (!map || !list || !countEl) return;
+
+    const links = [
+      ['北京', '广州'],
+      ['广州', '清远'],
+      ['广州', '肇庆'],
+      ['广州', '佛山'],
+      ['广州', '深圳'],
+      ['深圳', '香港'],
+      ['佛山', '阳江'],
+      ['广州', '潮州'],
+      ['潮州', '汕头'],
+      ['阳江', '海口'],
+      ['海口', '万宁'],
+    ];
+
+    const cityByName = Object.fromEntries(TRAVEL_CITIES.map(c => [c.name, c]));
+    const mapBg = `
+      <rect x="40" y="30" width="690" height="430" rx="18" fill="rgba(15,23,42,.3)" stroke="rgba(255,255,255,.08)" />
+      <path d="M180 70 L330 85 L465 90 L620 140 L652 248 L612 330 L520 382 L450 420 L330 404 L250 360 L198 302 L130 246 L142 160 Z"
+            fill="rgba(148,163,184,.08)" stroke="rgba(203,213,225,.22)" stroke-width="2" />
+      <text x="58" y="56" fill="rgba(226,232,240,.55)" font-size="12">中国 · 旅行轨迹示意</text>
+    `;
+
+    const lines = links.map(([from, to]) => {
+      const a = cityByName[from];
+      const b = cityByName[to];
+      if (!a || !b) return '';
+      return `<line class="map-link" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" />`;
+    }).join('');
+
+    const points = TRAVEL_CITIES.map((c, i) => `
+      <g data-city-idx="${i}">
+        <circle class="map-city ${c.visited ? 'visited' : ''}" cx="${c.x}" cy="${c.y}" r="5"></circle>
+        <text class="map-label" x="${c.x + 8}" y="${c.y - 8}">${c.name}</text>
+      </g>
+    `).join('');
+
+    map.innerHTML = `${mapBg}${lines}${points}`;
+
+    const updateCountAndList = () => {
+      const visited = TRAVEL_CITIES.filter(c => c.visited);
+      countEl.textContent = `已点亮 ${visited.length} / ${TRAVEL_CITIES.length}`;
+      list.innerHTML = TRAVEL_CITIES.map(c =>
+        `<span class="city-chip" style="${c.visited ? 'color:var(--text);border-color:rgba(34,211,238,.4);background:rgba(34,211,238,.1)' : ''}">${c.name}</span>`
+      ).join('');
+    };
+
+    map.querySelectorAll('[data-city-idx]').forEach(el => {
+      el.addEventListener('click', () => {
+        const i = Number(el.getAttribute('data-city-idx'));
+        if (Number.isNaN(i) || !TRAVEL_CITIES[i]) return;
+        TRAVEL_CITIES[i].visited = !TRAVEL_CITIES[i].visited;
+        const dot = el.querySelector('.map-city');
+        dot.classList.toggle('visited', TRAVEL_CITIES[i].visited);
+        updateCountAndList();
+      });
+    });
+
+    updateCountAndList();
+  }
+
   /* ── Update market badge ───────────────────────────────────────── */
   function updateMarket() {
     const open = isMarketOpen();
@@ -724,6 +1007,8 @@
       fallback.style.display = 'flex';
     };
   })();
+
+  renderTravelMap();
 
   loadData();
   // Auto-refresh every 5 minutes
