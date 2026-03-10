@@ -1,5 +1,9 @@
 # shareyee
 
+[![Live Site](https://img.shields.io/badge/Live-shareyee.duckdns.org-2ea44f?style=flat-square)](http://shareyee.duckdns.org)
+
+在线访问: [http://shareyee.duckdns.org](http://shareyee.duckdns.org)
+
 个人作品集网站，包含个人介绍和投资看板两大板块，支持实时拉取价格、汇率与新闻。
 
 ## 1. 个人介绍板块
