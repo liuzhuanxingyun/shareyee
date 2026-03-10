@@ -418,50 +418,21 @@
       border-radius: 14px;
       border: 1px solid var(--border-2);
       background:
-        linear-gradient(180deg, rgba(8,47,73,.4), rgba(15,23,42,.35)),
-        repeating-linear-gradient(0deg, transparent 0, transparent 26px, rgba(255,255,255,.025) 27px, transparent 28px),
-        repeating-linear-gradient(90deg, transparent 0, transparent 26px, rgba(255,255,255,.025) 27px, transparent 28px);
+        radial-gradient(circle at 30% 20%, rgba(14,116,144,.2), transparent 45%),
+        linear-gradient(180deg, rgba(8,47,73,.35), rgba(15,23,42,.38));
       padding: 10px;
     }
 
-    .travel-map {
-      display: block;
+    .map-canvas {
       width: 100%;
-      height: auto;
+      height: 520px;
     }
 
-    .map-city {
-      fill: #94a3b8;
-      stroke: rgba(255,255,255,.6);
-      stroke-width: 1;
-      transition: fill .2s, transform .2s;
-      transform-origin: center;
-      cursor: pointer;
-    }
-
-    .map-city.visited {
-      fill: #22d3ee;
-      filter: drop-shadow(0 0 4px rgba(34,211,238,.65));
-    }
-
-    .map-city:hover {
-      transform: scale(1.18);
-      fill: #60a5fa;
-    }
-
-    .map-link {
-      stroke: rgba(96,165,250,.45);
-      stroke-width: 2;
-      fill: none;
-      stroke-dasharray: 5 5;
-    }
-
-    .map-label {
-      fill: #cbd5e1;
-      font-size: 11px;
-      font-weight: 600;
-      pointer-events: none;
-      text-shadow: 0 1px 0 rgba(0,0,0,.5);
+    .map-fallback {
+      color: var(--muted);
+      font-size: .8rem;
+      text-align: center;
+      padding: 34px 10px;
     }
 
     .city-list {
@@ -494,11 +465,13 @@
       .summary-grid      { grid-template-columns: repeat(2,1fr); }
       .news-grid         { grid-template-columns: 1fr; }
       .interest-grid     { grid-template-columns: 1fr; }
+      .map-canvas        { height: 420px; }
       .s-title           { font-size: 1.7rem; }
       .dash-header       { flex-direction: column; align-items: flex-start; }
     }
     @media (max-width: 480px) {
       .summary-grid { grid-template-columns: 1fr; }
+      .map-canvas { height: 340px; }
     }
   </style>
 </head>
@@ -692,7 +665,7 @@
         </div>
 
         <div class="map-wrap">
-          <svg class="travel-map" id="travel-map" viewBox="0 0 760 500" role="img" aria-label="旅行城市地图"></svg>
+          <div class="map-canvas" id="travel-map" role="img" aria-label="中国地图与旅行城市"></div>
         </div>
 
         <div class="city-list" id="city-list"></div>
@@ -705,6 +678,7 @@
   © 2025 曾展鹏 · Shareyee · All rights reserved
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 <script>
   /* ── Portfolio definition ──────────────────────────────────────── */
   const PORTFOLIO = [
@@ -871,27 +845,83 @@
 
   /* ── Interests map ────────────────────────────────────────────── */
   const TRAVEL_CITIES = [
-    { name: '北京', x: 430, y: 110, visited: true },
-    { name: '汕头', x: 505, y: 325, visited: true },
-    { name: '潮州', x: 492, y: 315, visited: true },
-    { name: '佛山', x: 450, y: 300, visited: true },
-    { name: '万宁', x: 442, y: 405, visited: true },
-    { name: '海口', x: 418, y: 388, visited: true },
-    { name: '阳江', x: 420, y: 322, visited: true },
-    { name: '肇庆', x: 435, y: 288, visited: true },
-    { name: '香港', x: 473, y: 312, visited: true },
-    { name: '清远', x: 450, y: 272, visited: true },
-    { name: '深圳', x: 465, y: 308, visited: true },
-    { name: '广州', x: 456, y: 296, visited: true },
+    { name: '北京', coord: [116.4074, 39.9042], visited: true },
+    { name: '汕头', coord: [116.7085, 23.3710], visited: true },
+    { name: '潮州', coord: [116.6226, 23.6567], visited: true },
+    { name: '佛山', coord: [113.1214, 23.0215], visited: true },
+    { name: '万宁', coord: [110.3893, 18.7951], visited: true },
+    { name: '海口', coord: [110.3312, 20.0319], visited: true },
+    { name: '阳江', coord: [111.9822, 21.8579], visited: true },
+    { name: '肇庆', coord: [112.4651, 23.0472], visited: true },
+    { name: '香港', coord: [114.1694, 22.3193], visited: true },
+    { name: '清远', coord: [113.0560, 23.6820], visited: true },
+    { name: '深圳', coord: [114.0579, 22.5431], visited: true },
+    { name: '广州', coord: [113.2644, 23.1291], visited: true },
   ];
 
-  function renderTravelMap() {
-    const map = document.getElementById('travel-map');
+  let travelMapChart = null;
+  let chinaMapReady = false;
+
+  async function ensureChinaMapReady() {
+    if (!window.echarts) return false;
+    if (chinaMapReady || window.echarts.getMap('china')) {
+      chinaMapReady = true;
+      return true;
+    }
+
+    const mapSources = [
+      '/assets/china.geojson',
+      'https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json',
+      'https://fastly.jsdelivr.net/npm/echarts@5/map/json/china.json',
+      'https://unpkg.com/echarts@5/map/json/china.json',
+    ];
+
+    for (const url of mapSources) {
+      try {
+        const res = await fetch(url, { cache: 'force-cache' });
+        if (!res.ok) continue;
+        const geojson = await res.json();
+        window.echarts.registerMap('china', geojson);
+        chinaMapReady = true;
+        return true;
+      } catch (err) {
+        console.warn('[china-map] load failed:', url, err);
+      }
+    }
+
+    return false;
+  }
+
+  async function renderTravelMap() {
+    const mapEl = document.getElementById('travel-map');
     const list = document.getElementById('city-list');
     const countEl = document.getElementById('visit-count');
-    if (!map || !list || !countEl) return;
+    if (!mapEl || !list || !countEl) return;
 
-    const links = [
+    const visited = TRAVEL_CITIES.filter(c => c.visited);
+    countEl.textContent = `已点亮 ${visited.length} / ${TRAVEL_CITIES.length}`;
+    list.innerHTML = TRAVEL_CITIES.map(c =>
+      `<span class="city-chip" style="${c.visited ? 'color:var(--text);border-color:rgba(34,211,238,.4);background:rgba(34,211,238,.1)' : ''}">${c.name}</span>`
+    ).join('');
+
+    const ready = await ensureChinaMapReady();
+    if (!ready) {
+      mapEl.innerHTML = '<div class="map-fallback">中国地图资源加载失败。可将地图文件放到 assets/china.geojson 后重试。</div>';
+      return;
+    }
+
+    if (travelMapChart) {
+      travelMapChart.dispose();
+      travelMapChart = null;
+    }
+
+    travelMapChart = window.echarts.init(mapEl, null, { renderer: 'canvas' });
+    const pointData = visited.map(city => ({
+      name: city.name,
+      value: [...city.coord, 1],
+    }));
+
+    const cityLinks = [
       ['北京', '广州'],
       ['广州', '清远'],
       ['广州', '肇庆'],
@@ -905,51 +935,85 @@
       ['海口', '万宁'],
     ];
 
-    const cityByName = Object.fromEntries(TRAVEL_CITIES.map(c => [c.name, c]));
-    const mapBg = `
-      <rect x="40" y="30" width="690" height="430" rx="18" fill="rgba(15,23,42,.3)" stroke="rgba(255,255,255,.08)" />
-      <path d="M180 70 L330 85 L465 90 L620 140 L652 248 L612 330 L520 382 L450 420 L330 404 L250 360 L198 302 L130 246 L142 160 Z"
-            fill="rgba(148,163,184,.08)" stroke="rgba(203,213,225,.22)" stroke-width="2" />
-      <text x="58" y="56" fill="rgba(226,232,240,.55)" font-size="12">中国 · 旅行轨迹示意</text>
-    `;
+    const linesData = cityLinks
+      .map(([from, to]) => {
+        const a = TRAVEL_CITIES.find(c => c.name === from);
+        const b = TRAVEL_CITIES.find(c => c.name === to);
+        if (!a || !b || !a.visited || !b.visited) return null;
+        return { coords: [a.coord, b.coord] };
+      })
+      .filter(Boolean);
 
-    const lines = links.map(([from, to]) => {
-      const a = cityByName[from];
-      const b = cityByName[to];
-      if (!a || !b) return '';
-      return `<line class="map-link" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" />`;
-    }).join('');
-
-    const points = TRAVEL_CITIES.map((c, i) => `
-      <g data-city-idx="${i}">
-        <circle class="map-city ${c.visited ? 'visited' : ''}" cx="${c.x}" cy="${c.y}" r="5"></circle>
-        <text class="map-label" x="${c.x + 8}" y="${c.y - 8}">${c.name}</text>
-      </g>
-    `).join('');
-
-    map.innerHTML = `${mapBg}${lines}${points}`;
-
-    const updateCountAndList = () => {
-      const visited = TRAVEL_CITIES.filter(c => c.visited);
-      countEl.textContent = `已点亮 ${visited.length} / ${TRAVEL_CITIES.length}`;
-      list.innerHTML = TRAVEL_CITIES.map(c =>
-        `<span class="city-chip" style="${c.visited ? 'color:var(--text);border-color:rgba(34,211,238,.4);background:rgba(34,211,238,.1)' : ''}">${c.name}</span>`
-      ).join('');
-    };
-
-    map.querySelectorAll('[data-city-idx]').forEach(el => {
-      el.addEventListener('click', () => {
-        const i = Number(el.getAttribute('data-city-idx'));
-        if (Number.isNaN(i) || !TRAVEL_CITIES[i]) return;
-        TRAVEL_CITIES[i].visited = !TRAVEL_CITIES[i].visited;
-        const dot = el.querySelector('.map-city');
-        dot.classList.toggle('visited', TRAVEL_CITIES[i].visited);
-        updateCountAndList();
-      });
+    travelMapChart.setOption({
+      backgroundColor: 'transparent',
+      tooltip: {
+        trigger: 'item',
+        formatter: params => `${params.name}<br/>已点亮城市`,
+      },
+      geo: {
+        map: 'china',
+        roam: true,
+        zoom: 1.05,
+        label: { show: false },
+        itemStyle: {
+          areaColor: '#0f172a',
+          borderColor: 'rgba(148,163,184,.8)',
+          borderWidth: 1,
+        },
+        emphasis: {
+          label: { show: false },
+          itemStyle: { areaColor: '#1e293b' },
+        },
+      },
+      series: [
+        {
+          type: 'lines',
+          coordinateSystem: 'geo',
+          data: linesData,
+          zlevel: 1,
+          effect: {
+            show: true,
+            period: 7,
+            trailLength: 0.15,
+            color: '#7dd3fc',
+            symbolSize: 4,
+          },
+          lineStyle: {
+            color: 'rgba(125,211,252,.55)',
+            width: 1.6,
+            curveness: 0.18,
+          },
+        },
+        {
+          type: 'effectScatter',
+          coordinateSystem: 'geo',
+          zlevel: 2,
+          data: pointData,
+          rippleEffect: {
+            brushType: 'stroke',
+            scale: 3,
+          },
+          label: {
+            show: true,
+            formatter: '{b}',
+            color: '#e2e8f0',
+            position: 'right',
+            fontSize: 11,
+          },
+          symbolSize: 9,
+          itemStyle: {
+            color: '#22d3ee',
+            shadowBlur: 16,
+            shadowColor: 'rgba(34,211,238,.85)',
+          },
+        },
+      ],
     });
-
-    updateCountAndList();
   }
+
+  window.addEventListener('resize', () => {
+    if (travelMapChart) travelMapChart.resize();
+  });
 
   /* ── Update market badge ───────────────────────────────────────── */
   function updateMarket() {
