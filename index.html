@@ -390,8 +390,36 @@
 
     audio {
       width: 100%;
-      border-radius: 10px;
-      filter: hue-rotate(6deg) saturate(1.1);
+      border-radius: 12px;
+      border: 1px solid rgba(34,211,238,.28);
+      background:
+        linear-gradient(135deg, rgba(8,47,73,.55), rgba(15,23,42,.72));
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.05),
+        0 8px 20px rgba(2,132,199,.15);
+      accent-color: #22d3ee;
+      filter: saturate(1.08);
+    }
+
+    audio::-webkit-media-controls-enclosure {
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(8,47,73,.62), rgba(15,23,42,.78));
+      border: 1px solid rgba(34,211,238,.2);
+    }
+
+    audio::-webkit-media-controls-panel {
+      background: transparent;
+    }
+
+    audio::-webkit-media-controls-current-time-display,
+    audio::-webkit-media-controls-time-remaining-display {
+      color: #cbd5e1;
+      text-shadow: none;
+    }
+
+    audio::-webkit-media-controls-play-button,
+    audio::-webkit-media-controls-mute-button {
+      filter: brightness(1.05) saturate(1.15);
     }
 
     .travel-top {
@@ -637,7 +665,7 @@
   <div class="container">
     <div class="s-label">Interests</div>
     <div class="s-title">音乐与<span>旅行</span></div>
-    <div class="s-desc">一首用 Logic Pro 做的小作品，以及走过城市的旅行轨迹。地图上的城市点可点击切换亮灭状态。</div>
+    <div class="s-desc">一首用 Logic Pro 做的小作品，以及走过省份的旅行轨迹。地图会高亮已到访的省级区域。</div>
 
     <div class="interest-grid">
       <div class="interest-card">
@@ -659,13 +687,13 @@
         <div class="travel-top">
           <div>
             <div class="interest-head">旅行地图</div>
-            <div class="interest-sub">已点亮城市：北京、汕头、潮州、佛山、万宁、海口、阳江、肇庆、香港、清远、深圳、广州。</div>
+            <div class="interest-sub">已点亮省份：北京、广东、香港、海南、广西。</div>
           </div>
           <div class="visit-count" id="visit-count">已点亮 0 / 0</div>
         </div>
 
         <div class="map-wrap">
-          <div class="map-canvas" id="travel-map" role="img" aria-label="中国地图与旅行城市"></div>
+          <div class="map-canvas" id="travel-map" role="img" aria-label="中国地图与到访省份"></div>
         </div>
 
         <div class="city-list" id="city-list"></div>
@@ -844,20 +872,32 @@
   }
 
   /* ── Interests map ────────────────────────────────────────────── */
-  const TRAVEL_CITIES = [
-    { name: '北京', coord: [116.4074, 39.9042], visited: true },
-    { name: '汕头', coord: [116.7085, 23.3710], visited: true },
-    { name: '潮州', coord: [116.6226, 23.6567], visited: true },
-    { name: '佛山', coord: [113.1214, 23.0215], visited: true },
-    { name: '万宁', coord: [110.3893, 18.7951], visited: true },
-    { name: '海口', coord: [110.3312, 20.0319], visited: true },
-    { name: '阳江', coord: [111.9822, 21.8579], visited: true },
-    { name: '肇庆', coord: [112.4651, 23.0472], visited: true },
-    { name: '香港', coord: [114.1694, 22.3193], visited: true },
-    { name: '清远', coord: [113.0560, 23.6820], visited: true },
-    { name: '深圳', coord: [114.0579, 22.5431], visited: true },
-    { name: '广州', coord: [113.2644, 23.1291], visited: true },
-  ];
+  const VISITED_PROVINCES = ['北京', '广东', '香港', '海南', '广西'];
+
+  function normalizeProvinceName(name) {
+    return name
+      .replace('特别行政区', '')
+      .replace('壮族自治区', '')
+      .replace('回族自治区', '')
+      .replace('维吾尔自治区', '')
+      .replace('自治区', '')
+      .replace('省', '')
+      .replace('市', '');
+  }
+
+  function resolveVisitedProvinceNames() {
+    const map = window.echarts?.getMap('china');
+    const features = map?.geoJSON?.features || map?.geoJson?.features || [];
+    const names = features
+      ?.map(f => f?.properties?.name)
+      .filter(Boolean) || [];
+
+    const visitedNames = names.filter(name =>
+      VISITED_PROVINCES.includes(normalizeProvinceName(name))
+    );
+
+    return visitedNames;
+  }
 
   let travelMapChart = null;
   let chinaMapReady = false;
@@ -898,10 +938,9 @@
     const countEl = document.getElementById('visit-count');
     if (!mapEl || !list || !countEl) return;
 
-    const visited = TRAVEL_CITIES.filter(c => c.visited);
-    countEl.textContent = `已点亮 ${visited.length} / ${TRAVEL_CITIES.length}`;
-    list.innerHTML = TRAVEL_CITIES.map(c =>
-      `<span class="city-chip" style="${c.visited ? 'color:var(--text);border-color:rgba(34,211,238,.4);background:rgba(34,211,238,.1)' : ''}">${c.name}</span>`
+    countEl.textContent = `已点亮 ${VISITED_PROVINCES.length} / ${VISITED_PROVINCES.length}`;
+    list.innerHTML = VISITED_PROVINCES.map(name =>
+      `<span class="city-chip" style="color:var(--text);border-color:rgba(34,211,238,.4);background:rgba(34,211,238,.1)">${name}</span>`
     ).join('');
 
     const ready = await ensureChinaMapReady();
@@ -915,40 +954,17 @@
       travelMapChart = null;
     }
 
+    const visitedNames = resolveVisitedProvinceNames();
     travelMapChart = window.echarts.init(mapEl, null, { renderer: 'canvas' });
-    const pointData = visited.map(city => ({
-      name: city.name,
-      value: [...city.coord, 1],
-    }));
-
-    const cityLinks = [
-      ['北京', '广州'],
-      ['广州', '清远'],
-      ['广州', '肇庆'],
-      ['广州', '佛山'],
-      ['广州', '深圳'],
-      ['深圳', '香港'],
-      ['佛山', '阳江'],
-      ['广州', '潮州'],
-      ['潮州', '汕头'],
-      ['阳江', '海口'],
-      ['海口', '万宁'],
-    ];
-
-    const linesData = cityLinks
-      .map(([from, to]) => {
-        const a = TRAVEL_CITIES.find(c => c.name === from);
-        const b = TRAVEL_CITIES.find(c => c.name === to);
-        if (!a || !b || !a.visited || !b.visited) return null;
-        return { coords: [a.coord, b.coord] };
-      })
-      .filter(Boolean);
 
     travelMapChart.setOption({
       backgroundColor: 'transparent',
       tooltip: {
         trigger: 'item',
-        formatter: params => `${params.name}<br/>已点亮城市`,
+        formatter: params => {
+          const name = normalizeProvinceName(params.name || '');
+          return `${name}<br/>${VISITED_PROVINCES.includes(name) ? '已到访省份' : '未到访省份'}`;
+        },
       },
       geo: {
         map: 'china',
@@ -960,54 +976,25 @@
           borderColor: 'rgba(148,163,184,.8)',
           borderWidth: 1,
         },
+        regions: visitedNames.map(name => ({
+          name,
+          itemStyle: {
+            areaColor: 'rgba(34,211,238,.4)',
+            borderColor: '#67e8f9',
+            borderWidth: 1.2,
+          },
+          emphasis: {
+            itemStyle: {
+              areaColor: 'rgba(34,211,238,.58)',
+            },
+          },
+        })),
         emphasis: {
           label: { show: false },
           itemStyle: { areaColor: '#1e293b' },
         },
       },
-      series: [
-        {
-          type: 'lines',
-          coordinateSystem: 'geo',
-          data: linesData,
-          zlevel: 1,
-          effect: {
-            show: true,
-            period: 7,
-            trailLength: 0.15,
-            color: '#7dd3fc',
-            symbolSize: 4,
-          },
-          lineStyle: {
-            color: 'rgba(125,211,252,.55)',
-            width: 1.6,
-            curveness: 0.18,
-          },
-        },
-        {
-          type: 'effectScatter',
-          coordinateSystem: 'geo',
-          zlevel: 2,
-          data: pointData,
-          rippleEffect: {
-            brushType: 'stroke',
-            scale: 3,
-          },
-          label: {
-            show: true,
-            formatter: '{b}',
-            color: '#e2e8f0',
-            position: 'right',
-            fontSize: 11,
-          },
-          symbolSize: 9,
-          itemStyle: {
-            color: '#22d3ee',
-            shadowBlur: 16,
-            shadowColor: 'rgba(34,211,238,.85)',
-          },
-        },
-      ],
+      series: [],
     });
   }
 
