@@ -16,6 +16,7 @@ const PORT = process.env.PORT || 3000;
 const rss  = new Parser();
 const NEWS_TIMEOUT_MS = 6000;
 const EMAIL_TIMEZONE = 'Asia/Shanghai';
+const MAP_FETCH_TIMEOUT_MS = 8000;
 
 const PORTFOLIO = [
   { label: 'UBERON', ticker: 'UBER', shares: 1.83047, cost: 150 },
@@ -76,6 +77,21 @@ async function getForexRate() {
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const body = await r.json();
   return body.rates.CNY;
+}
+
+async function fetchJsonWithUA(url, timeoutMs = MAP_FETCH_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: { 'User-Agent': 'Mozilla/5.0 (Shareyee map proxy)' },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 async function buildPortfolioReport() {
@@ -234,6 +250,29 @@ app.get('/api/news', async (_req, res) => {
     }
   }
   res.status(503).json({ success: false, error: 'All news feeds unavailable' });
+});
+
+// ─── GET /api/china-map (server-side fallback proxy) ─────────────────────
+app.get('/api/china-map', async (_req, res) => {
+  const mapSources = [
+    'https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json',
+    'https://fastly.jsdelivr.net/npm/echarts@5/map/json/china.json',
+    'https://unpkg.com/echarts@5/map/json/china.json',
+  ];
+
+  for (const url of mapSources) {
+    try {
+      const geojson = await fetchJsonWithUA(url);
+      return res.json({ success: true, source: url, geojson });
+    } catch (err) {
+      console.error('[china-map]', url, err.message);
+    }
+  }
+
+  return res.status(503).json({
+    success: false,
+    error: 'All china map sources unavailable',
+  });
 });
 
 // ─── GET /api/mail/send-now ───────────────────────────────────────────────

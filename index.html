@@ -1005,6 +1005,7 @@
 
     const mapSources = [
       '/assets/china.geojson',
+      '/api/china-map',
       'https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json',
       'https://fastly.jsdelivr.net/npm/echarts@5/map/json/china.json',
       'https://unpkg.com/echarts@5/map/json/china.json',
@@ -1014,7 +1015,9 @@
       try {
         const res = await fetch(url, { cache: 'force-cache' });
         if (!res.ok) continue;
-        const geojson = await res.json();
+        const payload = await res.json();
+        const geojson = payload?.geojson || payload;
+        if (!geojson || geojson.type !== 'FeatureCollection') continue;
         window.echarts.registerMap('china', geojson);
         chinaMapReady = true;
         return true;
