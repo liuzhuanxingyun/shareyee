@@ -343,6 +343,14 @@
       padding: 20px;
     }
 
+    .music-card {
+      display: flex;
+      flex-direction: column;
+      background:
+        radial-gradient(circle at 18% 12%, rgba(14,116,144,.2), transparent 45%),
+        var(--surface);
+    }
+
     .interest-head {
       font-size: .95rem;
       font-weight: 700;
@@ -354,6 +362,17 @@
       font-size: .78rem;
       margin-bottom: 14px;
       line-height: 1.6;
+    }
+
+    .music-note {
+      font-size: .72rem;
+      color: var(--text-2);
+      margin-bottom: 14px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      width: fit-content;
+      border: 1px solid rgba(34,211,238,.22);
+      background: rgba(34,211,238,.08);
     }
 
     .music-cover {
@@ -369,7 +388,7 @@
       align-items: center;
       justify-content: center;
       font-size: 2.5rem;
-      margin-bottom: 14px;
+      margin-bottom: 12px;
     }
 
     .music-meta {
@@ -382,10 +401,81 @@
     }
 
     .music-title {
-      font-size: .85rem;
-      font-weight: 600;
+      font-size: .88rem;
+      font-weight: 700;
       color: var(--text);
-      margin-bottom: 10px;
+      margin-bottom: 8px;
+      letter-spacing: .2px;
+    }
+
+    .music-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      margin-top: auto;
+      min-height: 56px;
+      padding: 12px 16px;
+      border-radius: 14px;
+      border: 1px solid rgba(34,211,238,.35);
+      background: linear-gradient(135deg, rgba(8,47,73,.58), rgba(12,74,110,.42));
+      color: #67e8f9;
+      text-decoration: none;
+      font-size: .9rem;
+      font-weight: 700;
+      letter-spacing: .2px;
+      position: relative;
+      overflow: hidden;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.08),
+        0 6px 14px rgba(8,145,178,.15);
+      animation: musicLinkPulse 3.4s ease-in-out infinite;
+      transition: transform .22s, background .22s, border-color .22s, color .22s, box-shadow .22s;
+    }
+
+    .music-link::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -48%;
+      width: 42%;
+      height: 100%;
+      background: linear-gradient(110deg, transparent, rgba(255,255,255,.28), transparent);
+      transform: skewX(-20deg);
+      transition: left .55s ease;
+      pointer-events: none;
+    }
+
+    .music-link:hover {
+      transform: translateY(-1px);
+      background: linear-gradient(135deg, rgba(14,116,144,.72), rgba(8,47,73,.58));
+      border-color: rgba(34,211,238,.55);
+      color: #a5f3fc;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.12),
+        0 10px 20px rgba(14,116,144,.24);
+    }
+
+    .music-link:hover::before {
+      left: 120%;
+    }
+
+    @keyframes musicLinkPulse {
+      0%, 100% {
+        box-shadow:
+          inset 0 1px 0 rgba(255,255,255,.08),
+          0 6px 14px rgba(8,145,178,.14);
+      }
+      50% {
+        box-shadow:
+          inset 0 1px 0 rgba(255,255,255,.12),
+          0 9px 18px rgba(14,116,144,.2);
+      }
+    }
+
+    .music-card audio {
+      margin-bottom: 12px;
     }
 
     audio {
@@ -668,9 +758,10 @@
     <div class="s-desc">一首用 Logic Pro 做的小作品，以及走过省份的旅行轨迹。地图会高亮已到访的省级区域。</div>
 
     <div class="interest-grid">
-      <div class="interest-card">
+      <div class="interest-card music-card">
         <div class="interest-head">Logic Pro 小样</div>
         <div class="interest-sub">自己编排和混音的一段旋律，记录一次从 0 到 1 的音乐尝试。</div>
+        <div class="music-note">原创 Demo · 持续更新中</div>
         <div class="music-cover" aria-hidden="true">🎧</div>
         <div class="music-title">Track: logic-pro-song.mp3</div>
         <div class="music-meta">
@@ -681,6 +772,9 @@
           <source src="assets/music/logic-pro-song.mp3" type="audio/mpeg" />
           你的浏览器暂不支持音频播放，请更新浏览器后重试。
         </audio>
+        <a class="music-link" href="https://163cn.tv/2XAkgzj" target="_blank" rel="noopener noreferrer">
+          跳转网易云创作者页面: 流转行云
+        </a>
       </div>
 
       <div class="interest-card">
