@@ -51,3 +51,48 @@
 npm install
 npm start
 ```
+
+## 持仓数据安全存储（方案A）
+
+项目已改为由后端统一读取私有持仓文件，前端不再硬编码持仓数据。
+
+### 文件说明
+
+- `data/portfolio.private.json`: 私有持仓文件（已在 `.gitignore` 忽略，不会提交）
+- `data/portfolio.example.json`: 持仓模板文件（可提交，用于参考）
+
+### 修改持仓份数
+
+1. 编辑 `data/portfolio.private.json`
+2. 按以下格式维护每个持仓项：
+
+```json
+[
+	{
+		"label": "UBERON",
+		"ticker": "UBER",
+		"shares": 1.83047,
+		"cost": 150
+	}
+]
+```
+
+字段要求：
+
+- `label`: 非空字符串
+- `ticker`: 大写股票代码（允许 `.`）
+- `shares`: 大于 0
+- `cost`: 大于等于 0
+
+### 生效方式
+
+- 看板刷新时会重新读取文件，修改后刷新页面即可看到最新份数
+- 邮件日报发送时也读取同一文件，保证数据源一致
+
+### 可选配置
+
+可在 `.env` 中设置持仓文件路径（默认 `./data/portfolio.private.json`）：
+
+```dotenv
+PORTFOLIO_FILE=./data/portfolio.private.json
+```

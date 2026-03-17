@@ -1,6 +1,7 @@
 import express            from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { readFile }       from 'fs/promises';
 import Parser            from 'rss-parser';
 import cron              from 'node-cron';
 import nodemailer        from 'nodemailer';
@@ -17,13 +18,7 @@ const rss  = new Parser();
 const NEWS_TIMEOUT_MS = 6000;
 const EMAIL_TIMEZONE = 'Asia/Shanghai';
 const MAP_FETCH_TIMEOUT_MS = 8000;
-
-const PORTFOLIO = [
-  { label: 'UBERON', ticker: 'UBER', shares: 1.83047, cost: 150 },
-  { label: 'TQQQON', ticker: 'TQQQ', shares: 0.47427, cost: 25 },
-  { label: 'COINON', ticker: 'COIN', shares: 0.28838, cost: 50 },
-  { label: 'BABAON', ticker: 'BABA', shares: 0.36844, cost: 50 },
-];
+const PORTFOLIO_FILE = process.env.PORTFOLIO_FILE || join(__dirname, 'data', 'portfolio.private.json');
 
 const MAIL_CONFIG = {
   enabled: process.env.MAIL_ENABLED === '1',
@@ -94,11 +89,61 @@ async function fetchJsonWithUA(url, timeoutMs = MAP_FETCH_TIMEOUT_MS) {
   }
 }
 
+function parsePortfolioItem(raw, index) {
+  if (!raw || typeof raw !== 'object') {
+    throw new Error(`Invalid portfolio item at index ${index}: must be an object`);
+  }
+
+  const label = String(raw.label || '').trim();
+  const ticker = String(raw.ticker || '').trim().toUpperCase();
+  const shares = Number(raw.shares);
+  const cost = Number(raw.cost);
+
+  if (!label) throw new Error(`Invalid portfolio item at index ${index}: label is required`);
+  if (!/^[A-Z.]{1,12}$/.test(ticker)) {
+    throw new Error(`Invalid portfolio item at index ${index}: ticker must be uppercase letters/dot`);
+  }
+  if (!Number.isFinite(shares) || shares <= 0) {
+    throw new Error(`Invalid portfolio item at index ${index}: shares must be > 0`);
+  }
+  if (!Number.isFinite(cost) || cost < 0) {
+    throw new Error(`Invalid portfolio item at index ${index}: cost must be >= 0`);
+  }
+
+  return { label, ticker, shares, cost };
+}
+
+async function loadPortfolio() {
+  let text;
+  try {
+    text = await readFile(PORTFOLIO_FILE, 'utf8');
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      throw new Error(`Portfolio file not found: ${PORTFOLIO_FILE}`);
+    }
+    throw err;
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error(`Invalid JSON in portfolio file: ${PORTFOLIO_FILE}`);
+  }
+
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    throw new Error(`Portfolio file must be a non-empty array: ${PORTFOLIO_FILE}`);
+  }
+
+  return parsed.map(parsePortfolioItem);
+}
+
 async function buildPortfolioReport() {
-  const prices = await Promise.all(PORTFOLIO.map(item => stooqPrice(item.ticker)));
+  const portfolio = await loadPortfolio();
+  const prices = await Promise.all(portfolio.map(item => stooqPrice(item.ticker)));
   const forexRate = await getForexRate();
 
-  const rows = PORTFOLIO.map((item, idx) => {
+  const rows = portfolio.map((item, idx) => {
     const price = prices[idx];
     const mkt = price !== null ? price * item.shares : null;
     const pnl = mkt !== null ? mkt - item.cost : null;
@@ -113,7 +158,7 @@ async function buildPortfolioReport() {
     };
   });
 
-  const totalCost = PORTFOLIO.reduce((sum, item) => sum + item.cost, 0);
+  const totalCost = portfolio.reduce((sum, item) => sum + item.cost, 0);
   const totalMarketValue = rows.reduce((sum, row) => sum + (row.marketValue || 0), 0);
   const totalPnl = totalMarketValue - totalCost;
   const totalPnlPct = (totalPnl / totalCost) * 100;
@@ -188,10 +233,29 @@ async function sendPortfolioEmail(reason = 'scheduled') {
 // ─── Static files ──────────────────────────────────────────────────────────
 app.use(express.static(join(__dirname, '.')));
 
+// ─── GET /api/portfolio ───────────────────────────────────────────────────
+app.get('/api/portfolio', async (_req, res) => {
+  try {
+    const portfolio = await loadPortfolio();
+    const totalCost = portfolio.reduce((sum, item) => sum + item.cost, 0);
+    res.json({
+      success: true,
+      items: portfolio,
+      totalCost,
+      source: PORTFOLIO_FILE,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error('[portfolio]', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ─── GET /api/stocks ───────────────────────────────────────────────────────
 app.get('/api/stocks', async (_req, res) => {
-  const tickers = ['UBER', 'TQQQ', 'COIN', 'BABA'];
   try {
+    const portfolio = await loadPortfolio();
+    const tickers = [...new Set(portfolio.map(item => item.ticker))];
     const prices = await Promise.all(tickers.map(stooqPrice));
 
     const data = {};

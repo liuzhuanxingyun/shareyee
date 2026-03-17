@@ -773,8 +773,8 @@
     <div class="summary-grid">
       <div class="sum-card">
         <div class="sc-label">总投入</div>
-        <div class="sc-val">$275.00</div>
-        <div class="sc-sub">另有 $25.00 闲置</div>
+        <div class="sc-val" id="sc-cost"><span class="skel"></span></div>
+        <div class="sc-sub">持仓总成本（来自私有配置）</div>
       </div>
       <div class="sum-card">
         <div class="sc-label">当前市值</div>
@@ -864,14 +864,9 @@
 
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 <script>
-  /* ── Portfolio definition ──────────────────────────────────────── */
-  const PORTFOLIO = [
-    { label: 'UBERON', ticker: 'UBER', shares: 1.83047, cost: 150 },
-    { label: 'TQQQON', ticker: 'TQQQ', shares: 0.47427, cost: 25  },
-    { label: 'COINON', ticker: 'COIN', shares: 0.28838, cost: 50  },
-    { label: 'BABAON', ticker: 'BABA', shares: 0.36844, cost: 50  },
-  ];
-  const TOTAL_COST = PORTFOLIO.reduce((s, p) => s + p.cost, 0); // 275
+  /* ── Portfolio data (from backend) ─────────────────────────────── */
+  let portfolioItems = [];
+  let totalCost = 0;
 
   let forexRate = null;
   let allocationChart = null;
@@ -908,12 +903,18 @@
 
   /* ── Skeleton rows ─────────────────────────────────────────────── */
   function renderLoading() {
-    document.getElementById('tbody').innerHTML = PORTFOLIO.map(p => {
-      const avg = (p.cost / p.shares).toFixed(2);
+    const rows = portfolioItems.length > 0 ? portfolioItems : [
+      { label: 'ASSET', ticker: 'TICKER', shares: 0, cost: 0 },
+      { label: 'ASSET', ticker: 'TICKER', shares: 0, cost: 0 },
+      { label: 'ASSET', ticker: 'TICKER', shares: 0, cost: 0 },
+    ];
+
+    document.getElementById('tbody').innerHTML = rows.map(p => {
+      const avg = p.shares > 0 ? (p.cost / p.shares).toFixed(2) : '--';
       return `<tr>
         <td><div class="asset-name">${p.label}</div><div class="asset-ticker">${p.ticker}</div></td>
-        <td class="mono">${p.shares.toFixed(5)}</td>
-        <td class="mono">$${avg}</td>
+        <td class="mono">${p.shares > 0 ? p.shares.toFixed(5) : '--'}</td>
+        <td class="mono">${avg === '--' ? '--' : `$${avg}`}</td>
         <td><span class="skel"></span></td>
         <td><span class="skel"></span></td>
         <td><span class="skel"></span></td>
@@ -934,7 +935,7 @@
     let totalMktVal = 0;
     const chartData = [];
     
-    const rows = PORTFOLIO.map(p => {
+    const rows = portfolioItems.map(p => {
       const avg   = p.cost / p.shares;
       const price = prices?.[p.ticker] ?? null;
       const mval  = price !== null ? price * p.shares : null;
@@ -963,8 +964,8 @@
     document.getElementById('tbody').innerHTML = rows.join('');
 
     // Footer totals row
-    const totalPL  = totalMktVal - TOTAL_COST;
-    const totalPLp = (totalPL / TOTAL_COST) * 100;
+    const totalPL  = totalMktVal - totalCost;
+    const totalPLp = totalCost > 0 ? (totalPL / totalCost) * 100 : 0;
     document.getElementById('tfoot').innerHTML = `<tr>
       <td colspan="4" style="text-align:left;color:var(--muted)">合计</td>
       <td class="mono">$${f2(totalMktVal)}</td>
@@ -1043,6 +1044,16 @@
   }
 
   /* ── API calls ─────────────────────────────────────────────────── */
+  async function fetchPortfolioDefinition() {
+    const r = await fetch('/api/portfolio');
+    const d = await r.json();
+    if (!d.success) throw new Error(d.error);
+
+    portfolioItems = Array.isArray(d.items) ? d.items : [];
+    totalCost = Number(d.totalCost || 0);
+    document.getElementById('sc-cost').textContent = `$${f2(totalCost)}`;
+  }
+
   async function fetchStocks() {
     const r = await fetch('/api/stocks');
     const d = await r.json();
@@ -1239,17 +1250,28 @@
     btn.classList.add('loading');
     btn.textContent = '↻ 加载中…';
     updateMarket();
-    renderLoading();
 
     try {
+      await fetchPortfolioDefinition();
+      renderLoading();
+
       const [prices] = await Promise.all([
         fetchStocks().catch(e => { console.error('[stocks]', e); return null; }),
         fetchForex().catch(e  => { console.error('[forex]',  e); }),
         fetchNews().catch(e   => { console.error('[news]',   e); }),
       ]);
+
+      if (!portfolioItems.length) {
+        throw new Error('持仓列表为空，请检查后端配置文件');
+      }
+
       renderPortfolio(prices);
       document.getElementById('last-upd').textContent =
         `最后更新: ${new Date().toLocaleString('zh-CN')}`;
+    } catch (err) {
+      console.error('[loadData]', err);
+      document.getElementById('tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted)">持仓配置加载失败，请检查服务器日志</td></tr>';
+      document.getElementById('tfoot').innerHTML = '';
     } finally {
       btn.classList.remove('loading');
       btn.textContent = '↻ 刷新数据';

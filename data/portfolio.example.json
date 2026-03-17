@@ -1,0 +1,26 @@
+[
+  {
+    "label": "UBERON",
+    "ticker": "UBER",
+    "shares": 1.83047,
+    "cost": 150
+  },
+  {
+    "label": "TQQQON",
+    "ticker": "TQQQ",
+    "shares": 0.47427,
+    "cost": 25
+  },
+  {
+    "label": "COINON",
+    "ticker": "COIN",
+    "shares": 0.28838,
+    "cost": 50
+  },
+  {
+    "label": "BABAON",
+    "ticker": "BABA",
+    "shares": 0.54909,
+    "cost": 75
+  }
+]
