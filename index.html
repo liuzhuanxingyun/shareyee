@@ -528,6 +528,46 @@
       margin-bottom: 12px;
     }
 
+    .music-switch {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      padding: 4px;
+      border-radius: 12px;
+      border: 1px solid rgba(34,211,238,.2);
+      background: linear-gradient(135deg, rgba(8,47,73,.42), rgba(15,23,42,.58));
+    }
+
+    .music-pill {
+      flex: 1;
+      border: 0;
+      border-radius: 9px;
+      padding: 9px 10px;
+      background: transparent;
+      color: #94a3b8;
+      font-size: .78rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: color .2s, background .2s, box-shadow .2s, transform .2s;
+      font-family: inherit;
+    }
+
+    .music-pill:hover {
+      color: #cbd5e1;
+      background: rgba(148,163,184,.12);
+    }
+
+    .music-pill.active {
+      color: #a5f3fc;
+      background: rgba(14,116,144,.52);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
+    }
+
+    .music-pill:focus-visible {
+      outline: 2px solid rgba(34,211,238,.58);
+      outline-offset: 1px;
+    }
+
     audio {
       width: 100%;
       border-radius: 12px;
@@ -817,21 +857,21 @@
   <div class="container">
     <div class="s-label">Interests</div>
     <div class="s-title">音乐与<span>旅行</span></div>
-    <div class="s-desc">一首用 Logic Pro 做的小作品，以及走过省份的旅行轨迹。地图会高亮已到访的省级区域。</div>
+    <div class="s-desc">两首用 Logic Pro 做的小作品，以及走过省份的旅行轨迹。地图会高亮已到访的省级区域。</div>
 
     <div class="interest-grid">
       <div class="interest-card music-card">
-        <div class="interest-head">Logic Pro 小样</div>
-        <div class="interest-sub">自己编排和混音的一段旋律，记录一次从 0 到 1 的音乐尝试。</div>
+        <div class="interest-head">Logic Pro 小样合集</div>
+        <div class="interest-sub">自己编排和混音的两段旋律，记录从 0 到 1 的音乐尝试。</div>
         <div class="music-note">原创 Demo · 持续更新中</div>
         <div class="music-cover" aria-hidden="true">🎧</div>
-        <div class="music-title">Track: logic-pro-song.mp3</div>
-        <div class="music-meta">
-          <span>DAW: Logic Pro</span>
-          <span>类型: Demo</span>
+        <div class="music-title">Track 01: 小李天气</div>
+        <div class="music-switch" role="tablist" aria-label="选择要播放的歌曲">
+          <button class="music-pill active" type="button" data-src="assets/music/logic-pro-song.mp3" data-title="Track 01: 小李天气" aria-pressed="true">小李天气</button>
+          <button class="music-pill" type="button" data-src="assets/music/百变血液.mp3" data-title="Track 02: 百变血液" aria-pressed="false">百变血液</button>
         </div>
-        <audio controls preload="none">
-          <source src="assets/music/logic-pro-song.mp3" type="audio/mpeg" />
+        <audio id="music-player" controls preload="none">
+          <source id="music-source" src="assets/music/logic-pro-song.mp3" type="audio/mpeg" />
           你的浏览器暂不支持音频播放，请更新浏览器后重试。
         </audio>
         <a class="music-link" href="https://163cn.tv/2XAkgzj" target="_blank" rel="noopener noreferrer">
@@ -1309,6 +1349,36 @@
       avatar.style.display = 'none';
       fallback.style.display = 'flex';
     };
+  })();
+
+  (function initMusicSelector() {
+    const switchEl = document.querySelector('.music-switch');
+    const pillEls = Array.from(document.querySelectorAll('.music-pill'));
+    const playerEl = document.getElementById('music-player');
+    const sourceEl = document.getElementById('music-source');
+    const titleEl = document.querySelector('.music-card .music-title');
+    if (!switchEl || !pillEls.length || !playerEl || !sourceEl || !titleEl) return;
+
+    const applyTrack = (buttonEl) => {
+      const nextSrc = buttonEl?.dataset?.src;
+      const nextTitle = buttonEl?.dataset?.title || 'Track';
+      if (!nextSrc) return;
+
+      pillEls.forEach(pill => {
+        const isActive = pill === buttonEl;
+        pill.classList.toggle('active', isActive);
+        pill.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      });
+      titleEl.textContent = nextTitle;
+      sourceEl.src = nextSrc;
+      playerEl.load();
+    };
+
+    switchEl.addEventListener('click', e => {
+      const target = e.target.closest('.music-pill');
+      if (!target) return;
+      applyTrack(target);
+    });
   })();
 
   renderTravelMap();
