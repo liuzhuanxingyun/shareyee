@@ -536,6 +536,21 @@
       border-radius: 12px;
       border: 1px solid rgba(34,211,238,.2);
       background: linear-gradient(135deg, rgba(8,47,73,.42), rgba(15,23,42,.58));
+      position: relative;
+      overflow: hidden;
+    }
+
+    .music-switch-indicator {
+      position: absolute;
+      top: 4px;
+      left: 0;
+      height: calc(100% - 8px);
+      border-radius: 9px;
+      background: linear-gradient(135deg, rgba(14,116,144,.62), rgba(8,47,73,.72));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 6px 14px rgba(14,116,144,.22);
+      transition: transform .24s cubic-bezier(.2,.8,.2,1), width .24s cubic-bezier(.2,.8,.2,1);
+      will-change: transform, width;
+      pointer-events: none;
     }
 
     .music-pill {
@@ -550,6 +565,8 @@
       cursor: pointer;
       transition: color .2s, background .2s, box-shadow .2s, transform .2s;
       font-family: inherit;
+      position: relative;
+      z-index: 1;
     }
 
     .music-pill:hover {
@@ -559,13 +576,22 @@
 
     .music-pill.active {
       color: #a5f3fc;
-      background: rgba(14,116,144,.52);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
+      background: transparent;
+      text-shadow: 0 0 10px rgba(34,211,238,.3);
     }
 
     .music-pill:focus-visible {
       outline: 2px solid rgba(34,211,238,.58);
       outline-offset: 1px;
+    }
+
+    .music-title {
+      transition: opacity .22s ease, transform .22s ease;
+    }
+
+    .music-title.changing {
+      opacity: .7;
+      transform: translateY(1px);
     }
 
     audio {
@@ -867,6 +893,7 @@
         <div class="music-cover" aria-hidden="true">🎧</div>
         <div class="music-title">Track 01: 小李天气</div>
         <div class="music-switch" role="tablist" aria-label="选择要播放的歌曲">
+          <span class="music-switch-indicator" aria-hidden="true"></span>
           <button class="music-pill active" type="button" data-src="assets/music/logic-pro-song.mp3" data-title="Track 01: 小李天气" aria-pressed="true">小李天气</button>
           <button class="music-pill" type="button" data-src="assets/music/百变血液.mp3" data-title="Track 02: 百变血液" aria-pressed="false">百变血液</button>
         </div>
@@ -1353,11 +1380,18 @@
 
   (function initMusicSelector() {
     const switchEl = document.querySelector('.music-switch');
+    const indicatorEl = switchEl?.querySelector('.music-switch-indicator');
     const pillEls = Array.from(document.querySelectorAll('.music-pill'));
     const playerEl = document.getElementById('music-player');
     const sourceEl = document.getElementById('music-source');
     const titleEl = document.querySelector('.music-card .music-title');
-    if (!switchEl || !pillEls.length || !playerEl || !sourceEl || !titleEl) return;
+    if (!switchEl || !indicatorEl || !pillEls.length || !playerEl || !sourceEl || !titleEl) return;
+
+    const moveIndicator = (buttonEl) => {
+      const left = buttonEl.offsetLeft;
+      indicatorEl.style.width = `${buttonEl.offsetWidth}px`;
+      indicatorEl.style.transform = `translateX(${left}px)`;
+    };
 
     const applyTrack = (buttonEl) => {
       const nextSrc = buttonEl?.dataset?.src;
@@ -1369,7 +1403,11 @@
         pill.classList.toggle('active', isActive);
         pill.setAttribute('aria-pressed', isActive ? 'true' : 'false');
       });
+
+      moveIndicator(buttonEl);
+      titleEl.classList.add('changing');
       titleEl.textContent = nextTitle;
+      setTimeout(() => titleEl.classList.remove('changing'), 180);
       sourceEl.src = nextSrc;
       playerEl.load();
     };
@@ -1378,6 +1416,13 @@
       const target = e.target.closest('.music-pill');
       if (!target) return;
       applyTrack(target);
+    });
+
+    const activePill = pillEls.find(pill => pill.classList.contains('active')) || pillEls[0];
+    requestAnimationFrame(() => moveIndicator(activePill));
+    window.addEventListener('resize', () => {
+      const currentActive = pillEls.find(pill => pill.classList.contains('active')) || pillEls[0];
+      moveIndicator(currentActive);
     });
   })();
 
