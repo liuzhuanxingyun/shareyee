@@ -22,5 +22,11 @@
     "ticker": "BABA",
     "shares": 0.54909,
     "cost": 75
+  },
+  {
+    "label": "GLDON",
+    "ticker": "GLD",
+    "shares": 0.12109,
+    "cost": 50
   }
 ]
