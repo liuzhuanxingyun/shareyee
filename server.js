@@ -1,7 +1,7 @@
 import express            from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { readFile }       from 'fs/promises';
+import { readFile, writeFile, mkdir } from 'fs/promises';
 import Parser            from 'rss-parser';
 import cron              from 'node-cron';
 import nodemailer        from 'nodemailer';
@@ -19,6 +19,8 @@ const NEWS_TIMEOUT_MS = 6000;
 const EMAIL_TIMEZONE = 'Asia/Shanghai';
 const MAP_FETCH_TIMEOUT_MS = 8000;
 const PORTFOLIO_FILE = process.env.PORTFOLIO_FILE || join(__dirname, 'data', 'portfolio.private.json');
+const WIN_OR_NOT_DIR = join(__dirname, 'data', 'winOrNot');
+const WIN_OR_NOT_FILE = join(WIN_OR_NOT_DIR, 'pnl-history.json');
 
 const MAIL_CONFIG = {
   enabled: process.env.MAIL_ENABLED === '1',
@@ -209,6 +211,58 @@ function buildMailHtml(report) {
   `;
 }
 
+function chinaDateString(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('zh-CN', {
+    timeZone: EMAIL_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+
+  const map = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return `${map.year}-${map.month}-${map.day}`;
+}
+
+async function loadWinOrNotHistory() {
+  try {
+    const text = await readFile(WIN_OR_NOT_FILE, 'utf8');
+    const parsed = JSON.parse(text);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (err) {
+    if (err.code === 'ENOENT') return [];
+    throw err;
+  }
+}
+
+async function appendWinOrNotRecord(reason = 'cron') {
+  const report = await buildPortfolioReport();
+  const history = await loadWinOrNotHistory();
+
+  history.push({
+    date: chinaDateString(new Date(report.generatedAt)),
+    recordedAt: report.generatedAt,
+    timezone: EMAIL_TIMEZONE,
+    trigger: reason,
+    totalCost: Number(report.totalCost.toFixed(2)),
+    totalMarketValue: Number(report.totalMarketValue.toFixed(2)),
+    totalPnl: Number(report.totalPnl.toFixed(2)),
+    totalPnlPct: Number(report.totalPnlPct.toFixed(4)),
+    totalPnlCny: Number(report.totalPnlCny.toFixed(2)),
+    forexRate: Number(report.forexRate.toFixed(6)),
+    win: report.totalPnl >= 0,
+  });
+
+  await mkdir(WIN_OR_NOT_DIR, { recursive: true });
+  await writeFile(WIN_OR_NOT_FILE, `${JSON.stringify(history, null, 2)}\n`, 'utf8');
+
+  return {
+    recordedAt: report.generatedAt,
+    totalPnlPct: report.totalPnlPct,
+    win: report.totalPnl >= 0,
+    count: history.length,
+  };
+}
+
 async function sendPortfolioEmail(reason = 'scheduled') {
   if (!MAIL_CONFIG.enabled) {
     console.log('[mail] skipped: MAIL_ENABLED is not 1');
@@ -363,6 +417,18 @@ cron.schedule('30 7 * * *', async () => {
 }, { timezone: EMAIL_TIMEZONE });
 
 console.log(`[mail-cron] scheduled at 07:30 (${EMAIL_TIMEZONE})`);
+
+// ─── Daily PnL record schedule (06:00 in Asia/Shanghai) ───────────────────
+cron.schedule('0 6 * * *', async () => {
+  try {
+    const result = await appendWinOrNotRecord('cron');
+    console.log(`[win-or-not-cron] recorded: ${result.totalPnlPct.toFixed(2)}%`);
+  } catch (err) {
+    console.error('[win-or-not-cron]', err.message);
+  }
+}, { timezone: EMAIL_TIMEZONE });
+
+console.log(`[win-or-not-cron] scheduled at 06:00 (${EMAIL_TIMEZONE})`);
 
 // ─── Start ─────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
