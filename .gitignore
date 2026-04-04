@@ -3,3 +3,4 @@ node_modules/
 *.log
 data/portfolio.private.json
 !data/.gitkeep
+.github/agents/

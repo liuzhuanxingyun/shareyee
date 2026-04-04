@@ -1002,10 +1002,16 @@ async function sendPortfolioEmail(reason = 'scheduled') {
   }
 
   const report = await buildPortfolioReport();
+  const mailDate = new Intl.DateTimeFormat('zh-CN', {
+    timeZone: EMAIL_TIMEZONE,
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+  }).format(new Date(report.generatedAt));
   await mailTransporter.sendMail({
     from: MAIL_CONFIG.from,
     to: MAIL_CONFIG.to,
-    subject: `Shareyee 持仓盈亏日报 (${new Date().toLocaleDateString('zh-CN', { timeZone: EMAIL_TIMEZONE })})`,
+    subject: `Shareyee 持仓盈亏日报 (${mailDate}) 总盈亏：${signedMoney(report.totalPnl, '$')}`,
     html: buildMailHtml(report),
   });
 
