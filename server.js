@@ -451,6 +451,14 @@ function toNumberOrNull(value) {
   return Number.isFinite(number) ? number : null;
 }
 
+function isUsdtLikeAsset(item, walletToken) {
+  const candidates = [item?.label, item?.ticker, walletToken?.symbol, walletToken?.name];
+  return candidates.some(value => {
+    const key = normalizeLookupKey(value);
+    return key.includes('USDT') || key.includes('TETHERUSD');
+  });
+}
+
 function formatQuantity(value) {
   if (!Number.isFinite(value)) return '--';
   if (value === 0) return '0.00000';
@@ -773,6 +781,31 @@ function parsePortfolioItem(raw, index) {
   return item;
 }
 
+function parsePortfolioDefinition(raw) {
+  if (Array.isArray(raw)) {
+    if (raw.length === 0) {
+      throw new Error(`Portfolio file must be a non-empty array or an object with a non-empty items array: ${PORTFOLIO_FILE}`);
+    }
+    return { capitalRmb: null, items: raw };
+  }
+
+  if (!raw || typeof raw !== 'object') {
+    throw new Error(`Invalid portfolio file: expected an array or an object with an items array: ${PORTFOLIO_FILE}`);
+  }
+
+  const items = Array.isArray(raw.items) ? raw.items : [];
+  if (items.length === 0) {
+    throw new Error(`Portfolio file must contain a non-empty items array: ${PORTFOLIO_FILE}`);
+  }
+
+  const capitalRmb = toNumberOrNull(raw.capitalRmb ?? raw.inputPoolRmb ?? raw.cashReserveRmb);
+  if (capitalRmb !== null && capitalRmb < 0) {
+    throw new Error(`Invalid portfolio file: capitalRmb must be >= 0: ${PORTFOLIO_FILE}`);
+  }
+
+  return { capitalRmb, items };
+}
+
 async function loadPortfolio() {
   let text;
   try {
@@ -791,17 +824,19 @@ async function loadPortfolio() {
     throw new Error(`Invalid JSON in portfolio file: ${PORTFOLIO_FILE}`);
   }
 
-  if (!Array.isArray(parsed) || parsed.length === 0) {
-    throw new Error(`Portfolio file must be a non-empty array: ${PORTFOLIO_FILE}`);
-  }
+  const { capitalRmb, items } = parsePortfolioDefinition(parsed);
 
-  return parsed
-    .map(parsePortfolioItem)
-    .filter(item => item.enabled !== false);
+  return {
+    capitalRmb,
+    items: items
+      .map(parsePortfolioItem)
+      .filter(item => item.enabled !== false),
+  };
 }
 
 async function buildPortfolioReport() {
-  const portfolio = await loadPortfolio();
+  const portfolioDefinition = await loadPortfolio();
+  const portfolio = portfolioDefinition.items;
   let walletTokens = [];
   let walletSyncStatus = 'empty';
   let walletSyncError = null;
@@ -842,7 +877,9 @@ async function buildPortfolioReport() {
       chain: WEB3_CHAIN,
     });
 
-    const price = await stooqPrice(item.ticker).catch(() => null);
+    const price = isUsdtLikeAsset(item, walletToken)
+      ? 1
+      : await stooqPrice(item.ticker).catch(() => null);
     const marketValue = balance !== null && price !== null
       ? price * balance
       : null;
@@ -866,18 +903,32 @@ async function buildPortfolioReport() {
       usdValue24hPercentChange: toNumberOrNull(walletToken?.usd_price_24hr_percent_change),
       portfolioPercentage: toNumberOrNull(walletToken?.portfolio_percentage),
       balanceSource: walletToken ? 'wallet' : legacyBalance !== null ? 'legacy' : 'unknown',
-      priceSource: price !== null ? 'stooq' : 'unknown',
+      priceSource: isUsdtLikeAsset(item, walletToken)
+        ? 'par'
+        : (price !== null ? 'stooq' : 'unknown'),
       balanceDisplay: formatQuantity(balance),
     };
   }));
 
-  const totalCost = portfolio.reduce((sum, item) => sum + item.cost, 0);
+  const legacyInputPoolUsd = portfolio.reduce((sum, item) => sum + item.cost, 0);
   const hasResolvedBalances = rows.some(row => row.balance !== null);
-  const totalMarketValue = walletSyncStatus === 'error' && !hasResolvedBalances
+  const valuePoolUsd = walletSyncStatus === 'error' && !hasResolvedBalances
     ? null
     : rows.reduce((sum, row) => sum + (row.marketValue || 0), 0);
-  const totalPnl = totalMarketValue !== null ? totalMarketValue - totalCost : null;
-  const totalPnlPct = totalMarketValue !== null && totalCost > 0 ? (totalPnl / totalCost) * 100 : null;
+  const inputPoolRmb = Number.isFinite(portfolioDefinition.capitalRmb)
+    ? portfolioDefinition.capitalRmb
+    : (forexRate && Number.isFinite(legacyInputPoolUsd) ? legacyInputPoolUsd * forexRate : null);
+  const inputPoolUsd = Number.isFinite(portfolioDefinition.capitalRmb)
+    ? (forexRate ? portfolioDefinition.capitalRmb / forexRate : null)
+    : legacyInputPoolUsd;
+  const valuePoolRmb = valuePoolUsd !== null && forexRate ? valuePoolUsd * forexRate : null;
+  const hasPnlRows = rows.some(row => Number.isFinite(row.pnl));
+  const costBasisUsd = rows.reduce((sum, row) => sum + (Number.isFinite(row.cost) ? row.cost : 0), 0);
+  const pnlUsd = hasPnlRows
+    ? rows.reduce((sum, row) => sum + (Number.isFinite(row.pnl) ? row.pnl : 0), 0)
+    : null;
+  const pnlRmb = pnlUsd !== null && forexRate ? pnlUsd * forexRate : null;
+  const pnlPct = pnlUsd !== null && costBasisUsd > 0 ? (pnlUsd / costBasisUsd) * 100 : null;
 
   return {
     rows,
@@ -892,17 +943,30 @@ async function buildPortfolioReport() {
       syncError: walletSyncError,
     },
     forexRate,
-    totalCost,
-    totalMarketValue,
-    totalPnl,
-    totalPnlPct,
-    totalPnlCny: forexRate && totalPnl !== null ? totalPnl * forexRate : null,
+    capitalRmb: inputPoolRmb,
+    capitalUsd: inputPoolUsd,
+    inputPoolRmb,
+    inputPoolUsd,
+    valuePoolUsd,
+    valuePoolRmb,
+    totalCost: inputPoolUsd,
+    totalCostRmb: inputPoolRmb,
+    totalCostUsd: inputPoolUsd,
+    totalMarketValue: valuePoolUsd,
+    totalMarketValueRmb: valuePoolRmb,
+    totalMarketValueUsd: valuePoolUsd,
+    totalPnl: pnlUsd,
+    totalPnlUsd: pnlUsd,
+    totalPnlRmb: pnlRmb,
+    totalPnlPct: pnlPct,
+    totalPnlCny: pnlRmb,
     generatedAt: new Date().toISOString(),
   };
 }
 
 function buildMailHtml(report) {
   const rowsHtml = report.rows.map(row => {
+    const cost = row.cost !== null ? `$${f2(row.cost)}` : 'N/A';
     const price = row.price !== null ? `$${f2(row.price)}` : 'N/A';
     const balance = Number.isFinite(row.balance) ? row.balance.toFixed(5) : 'N/A';
     const pnl = row.pnl !== null ? signedMoney(row.pnl, '$') : 'N/A';
@@ -910,6 +974,7 @@ function buildMailHtml(report) {
     return `<tr>
       <td>${row.label} (${row.ticker})</td>
       <td>${balance}</td>
+      <td>${cost}</td>
       <td>${row.avg !== null ? `$${f2(row.avg)}` : 'N/A'}</td>
       <td>${price}</td>
       <td>${pnl}</td>
@@ -924,16 +989,16 @@ function buildMailHtml(report) {
     <table border="1" cellpadding="8" cellspacing="0" style="border-collapse:collapse;font-family:Arial,sans-serif;">
       <thead>
         <tr>
-          <th>资产</th><th>数量</th><th>平均成本</th><th>当前价</th><th>盈亏(USD)</th><th>盈亏比例</th>
+          <th>资产</th><th>数量</th><th>投入成本</th><th>平均成本</th><th>当前价</th><th>盈亏(USD)</th><th>盈亏比例</th>
         </tr>
       </thead>
       <tbody>${rowsHtml}</tbody>
     </table>
-    <p>投入池: $${f2(report.totalCost)}</p>
-    <p>价值池: $${f2(report.totalMarketValue)}</p>
-    <p>浮动盈亏(USD): ${signedMoney(report.totalPnl, '$')} (${Number.isFinite(report.totalPnlPct) ? `${report.totalPnlPct >= 0 ? '+' : ''}${f2(report.totalPnlPct)}%` : 'N/A'})</p>
+    <p>投入池: ¥${f2(report.inputPoolRmb)} / $${f2(report.inputPoolUsd)}</p>
+    <p>价值池: ¥${f2(report.valuePoolRmb)} / $${f2(report.valuePoolUsd)}</p>
+    <p>浮动盈亏(CNY): ${signedMoney(report.totalPnlRmb, 'CNY ')} (${Number.isFinite(report.totalPnlPct) ? `${report.totalPnlPct >= 0 ? '+' : ''}${f2(report.totalPnlPct)}%` : 'N/A'})</p>
+    <p>浮动盈亏(USD): ${signedMoney(report.totalPnl, '$')}</p>
     <p>汇率: 1 USD = ${f2(report.forexRate)} CNY</p>
-    <p>浮动盈亏(CNY): ${signedMoney(report.totalPnlCny, 'CNY ')}</p>
   `;
 }
 
@@ -960,35 +1025,95 @@ async function loadWinOrNotHistory() {
   }
 }
 
+function normalizeWinOrNotHistory(history) {
+  const byDate = new Map();
+
+  for (const record of Array.isArray(history) ? history : []) {
+    if (!record || typeof record !== 'object') continue;
+
+    const date = String(record.date ?? '').trim();
+    if (!date) continue;
+
+    const normalizedRecord = {
+      ...record,
+      date,
+      recordedAt: String(record.recordedAt ?? '').trim() || null,
+    };
+
+    const existing = byDate.get(date);
+    if (!existing) {
+      byDate.set(date, normalizedRecord);
+      continue;
+    }
+
+    const currentTime = Date.parse(normalizedRecord.recordedAt || normalizedRecord.date || '');
+    const existingTime = Date.parse(existing.recordedAt || existing.date || '');
+
+    if (!Number.isFinite(existingTime) || (Number.isFinite(currentTime) && currentTime >= existingTime)) {
+      byDate.set(date, normalizedRecord);
+    }
+  }
+
+  return [...byDate.values()].sort((left, right) => {
+    const leftTime = Date.parse(left.recordedAt || left.date || '');
+    const rightTime = Date.parse(right.recordedAt || right.date || '');
+
+    if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) {
+      return leftTime - rightTime;
+    }
+
+    return String(left.date).localeCompare(String(right.date));
+  });
+}
+
 async function appendWinOrNotRecord(reason = 'cron') {
   const report = await buildPortfolioReport();
-  const history = await loadWinOrNotHistory();
-  const totalMarketValue = Number.isFinite(report.totalMarketValue) ? Number(report.totalMarketValue.toFixed(2)) : null;
-  const totalPnl = Number.isFinite(report.totalPnl) ? Number(report.totalPnl.toFixed(2)) : null;
+  const history = normalizeWinOrNotHistory(await loadWinOrNotHistory());
+  const inputPoolRmb = Number.isFinite(report.inputPoolRmb) ? Number(report.inputPoolRmb.toFixed(2)) : null;
+  const inputPoolUsd = Number.isFinite(report.inputPoolUsd) ? Number(report.inputPoolUsd.toFixed(2)) : null;
+  const valuePoolUsd = Number.isFinite(report.valuePoolUsd) ? Number(report.valuePoolUsd.toFixed(2)) : null;
+  const valuePoolRmb = Number.isFinite(report.valuePoolRmb) ? Number(report.valuePoolRmb.toFixed(2)) : null;
+  const totalPnlUsd = Number.isFinite(report.totalPnl) ? Number(report.totalPnl.toFixed(2)) : null;
+  const totalPnlRmb = Number.isFinite(report.totalPnlRmb) ? Number(report.totalPnlRmb.toFixed(2)) : null;
   const totalPnlPct = Number.isFinite(report.totalPnlPct) ? Number(report.totalPnlPct.toFixed(4)) : null;
 
-  history.push({
+  const nextRecord = {
     date: chinaDateString(new Date(report.generatedAt)),
     recordedAt: report.generatedAt,
     timezone: EMAIL_TIMEZONE,
     trigger: reason,
-    totalCost: Number(report.totalCost.toFixed(2)),
-    totalMarketValue,
-    totalPnl,
+    capitalRmb: inputPoolRmb,
+    capitalUsd: inputPoolUsd,
+    inputPoolRmb,
+    inputPoolUsd,
+    valuePoolUsd,
+    valuePoolRmb,
+    totalCost: inputPoolUsd,
+    totalCostRmb: inputPoolRmb,
+    totalCostUsd: inputPoolUsd,
+    totalMarketValue: valuePoolUsd,
+    totalMarketValueUsd: valuePoolUsd,
+    totalMarketValueRmb: valuePoolRmb,
+    totalPnl: totalPnlUsd,
+    totalPnlUsd,
+    totalPnlRmb,
     totalPnlPct,
-    totalPnlCny: report.totalPnlCny !== null ? Number(report.totalPnlCny.toFixed(2)) : null,
+    totalPnlCny: totalPnlRmb,
     forexRate: report.forexRate !== null ? Number(report.forexRate.toFixed(6)) : null,
     win: Number.isFinite(report.totalPnl) ? report.totalPnl >= 0 : false,
-  });
+  };
+
+  const nextHistory = history.filter(record => record.date !== nextRecord.date);
+  nextHistory.push(nextRecord);
 
   await mkdir(WIN_OR_NOT_DIR, { recursive: true });
-  await writeFile(WIN_OR_NOT_FILE, `${JSON.stringify(history, null, 2)}\n`, 'utf8');
+  await writeFile(WIN_OR_NOT_FILE, `${JSON.stringify(nextHistory, null, 2)}\n`, 'utf8');
 
   return {
     recordedAt: report.generatedAt,
     totalPnlPct: report.totalPnlPct,
     win: report.totalPnl >= 0,
-    count: history.length,
+    count: nextHistory.length,
   };
 }
 
@@ -1011,7 +1136,7 @@ async function sendPortfolioEmail(reason = 'scheduled') {
   await mailTransporter.sendMail({
     from: MAIL_CONFIG.from,
     to: MAIL_CONFIG.to,
-    subject: `Shareyee 持仓盈亏日报 (${mailDate}) 总盈亏：${signedMoney(report.totalPnl, '$')}`,
+    subject: `Shareyee 持仓盈亏日报 (${mailDate}) 总盈亏：${signedMoney(report.totalPnlRmb, 'CNY ')}`,
     html: buildMailHtml(report),
   });
 
@@ -1079,9 +1204,21 @@ app.get('/api/portfolio', async (_req, res) => {
       success: true,
       wallet: report.wallet,
       items: report.rows,
+      capitalRmb: report.capitalRmb,
+      capitalUsd: report.capitalUsd,
+      inputPoolRmb: report.inputPoolRmb,
+      inputPoolUsd: report.inputPoolUsd,
+      valuePoolUsd: report.valuePoolUsd,
+      valuePoolRmb: report.valuePoolRmb,
       totalCost: report.totalCost,
+      totalCostRmb: report.totalCostRmb,
+      totalCostUsd: report.totalCostUsd,
       totalMarketValue: report.totalMarketValue,
+      totalMarketValueRmb: report.totalMarketValueRmb,
+      totalMarketValueUsd: report.totalMarketValueUsd,
       totalPnl: report.totalPnl,
+      totalPnlUsd: report.totalPnlUsd,
+      totalPnlRmb: report.totalPnlRmb,
       totalPnlPct: report.totalPnlPct,
       totalPnlCny: report.totalPnlCny,
       forexRate: report.forexRate,
@@ -1091,6 +1228,23 @@ app.get('/api/portfolio', async (_req, res) => {
     });
   } catch (err) {
     console.error('[portfolio]', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ─── GET /api/win-or-not/history ─────────────────────────────────────────
+app.get('/api/win-or-not/history', async (_req, res) => {
+  try {
+    const history = normalizeWinOrNotHistory(await loadWinOrNotHistory());
+    res.json({
+      success: true,
+      items: history,
+      count: history.length,
+      source: WIN_OR_NOT_FILE,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error('[win-or-not]', err.message);
     res.status(500).json({ success: false, error: err.message });
   }
 });

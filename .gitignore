@@ -4,3 +4,4 @@ node_modules/
 data/portfolio.private.json
 !data/.gitkeep
 .github/agents/
+data/winOrNot/pnl-history.json

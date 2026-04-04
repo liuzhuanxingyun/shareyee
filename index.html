@@ -317,6 +317,124 @@
       display: flex; flex-direction: column;
     }
     .chart-title { font-size: .85rem; font-weight: 600; margin-bottom: 10px; color: var(--text); }
+
+    .history-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .history-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .history-title {
+      font-size: .92rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .history-meta {
+      margin-top: 4px;
+      font-size: .72rem;
+      color: var(--muted);
+    }
+    .history-range {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px;
+      border-radius: 12px;
+      border: 1px solid var(--border-2);
+      background: rgba(255,255,255,.03);
+    }
+    .history-range button {
+      border: 0;
+      background: transparent;
+      color: var(--text-2);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: .74rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .18s, color .18s;
+      font-family: inherit;
+    }
+    .history-range button:hover:not(.active) { color: var(--text); }
+    .history-range button.active {
+      background: rgba(129,140,248,.16);
+      color: var(--text);
+    }
+    .history-chart {
+      min-height: 300px;
+      margin-bottom: 16px;
+    }
+    .history-records {
+      border-top: 1px solid var(--border-2);
+      padding-top: 14px;
+    }
+    .history-records > summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      cursor: pointer;
+      user-select: none;
+      list-style: none;
+      font-size: .78rem;
+      font-weight: 700;
+      color: var(--text);
+      transition: color .18s ease;
+    }
+    .history-records > summary::-webkit-details-marker {
+      display: none;
+    }
+    .history-records > summary::after {
+      content: '▾';
+      color: var(--muted);
+      font-size: .9rem;
+      line-height: 1;
+      transition: transform .18s ease, color .18s ease;
+    }
+    .history-records[open] > summary::after {
+      transform: rotate(180deg);
+      color: var(--text);
+    }
+    .history-records > summary:hover {
+      color: var(--accent);
+    }
+    .history-records-note {
+      color: var(--muted);
+      font-size: .7rem;
+      font-weight: 600;
+    }
+    .history-table-wrap {
+      overflow-x: auto;
+      margin-top: 12px;
+    }
+    .history-table {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: collapse;
+    }
+    .history-table thead th {
+      padding: 11px 14px;
+      font-size: .66rem;
+    }
+    .history-table td {
+      padding: 12px 14px;
+      font-size: .82rem;
+    }
+    .history-empty {
+      color: var(--muted);
+      font-size: .84rem;
+      padding: 18px 6px;
+      text-align: center;
+    }
     
     .table-wrap {
       background: var(--surface);
@@ -324,7 +442,7 @@
       border-radius: 16px; overflow: hidden;
       overflow-x: auto;
     }
-    table { width: 100%; border-collapse: collapse; min-width: 680px; }
+    table { width: 100%; border-collapse: collapse; min-width: 760px; }
     thead th {
       padding: 13px 18px;
       font-size: .68rem; font-weight: 700; letter-spacing: .9px;
@@ -379,6 +497,32 @@
     }
     .sum-card .sc-val   { font-size: 1.3rem; font-weight: 700; font-family: var(--mono); }
     .sum-card .sc-sub   { font-size: .72rem; color: var(--muted); margin-top: 4px; }
+    .money-stack {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-start;
+      line-height: 1.05;
+    }
+    .money-stack .money-main {
+      font-family: var(--mono);
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: inherit;
+    }
+    .money-stack .money-sub {
+      font-family: var(--mono);
+      font-size: .68rem;
+      font-weight: 600;
+      color: var(--text-2);
+      margin-top: 3px;
+    }
+    .money-stack.money-stack--compact .money-main {
+      font-size: .88rem;
+    }
+    .money-stack.money-stack--compact .money-sub {
+      font-size: .64rem;
+      margin-top: 1px;
+    }
 
     /* Forex strip */
     .forex-strip {
@@ -856,6 +1000,7 @@
             <tr>
               <th style="text-align:left">资产名称</th>
               <th>持有数量</th>
+              <th>投入成本</th>
               <th>平均成本</th>
               <th>当前价格</th>
               <th>持仓市值</th>
@@ -885,18 +1030,56 @@
       <div class="sum-card">
         <div class="sc-label">价值池</div>
         <div class="sc-val" id="sc-mktval"><span class="skel"></span></div>
-        <div class="sc-sub" id="sc-mktval-cny">钱包当前估值</div>
+        <div class="sc-sub" id="sc-mktval-cny">按实时汇率折算</div>
       </div>
       <div class="sum-card">
-        <div class="sc-label">浮动盈亏 (USD)</div>
+        <div class="sc-label">浮动盈亏</div>
         <div class="sc-val" id="sc-pnl"><span class="skel"></span></div>
-        <div class="sc-sub" id="sc-pnl-pct">—</div>
+        <div class="sc-sub" id="sc-pnl-note">按实时汇率折算</div>
       </div>
       <div class="sum-card">
-        <div class="sc-label">浮动盈亏 (RMB)</div>
-        <div class="sc-val" id="sc-pnl-cny"><span class="skel"></span></div>
+        <div class="sc-label">盈亏比例</div>
+        <div class="sc-val" id="sc-pnl-pct"><span class="skel"></span></div>
         <div class="sc-sub" id="sc-rate-hint">汇率加载中…</div>
       </div>
+    </div>
+
+    <!-- PnL History Chart -->
+    <div class="history-panel">
+      <div class="history-head">
+        <div>
+          <div class="history-title">浮动盈亏历史曲线</div>
+          <div class="history-meta" id="pnl-history-meta">历史数据加载中…</div>
+        </div>
+        <div class="history-range" id="pnl-history-range" role="tablist" aria-label="选择历史明细范围">
+          <button type="button" data-range="7">最近 7 天</button>
+          <button type="button" data-range="30" class="active">最近 30 天</button>
+        </div>
+      </div>
+      <div id="pnl-history-chart" class="history-chart"></div>
+      <details class="history-records">
+        <summary>
+          <span>历史记录明细</span>
+          <span class="history-records-note">点击展开 / 收起</span>
+        </summary>
+        <div class="history-table-wrap">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th style="text-align:left">日期</th>
+                <th>浮动盈亏 (RMB)</th>
+                <th>浮动盈亏 (USD)</th>
+                <th>盈亏比例</th>
+                <th>价值池 (RMB/USD)</th>
+                <th>记录时间</th>
+              </tr>
+            </thead>
+            <tbody id="pnl-history-tbody">
+              <tr><td colspan="6" class="history-empty">历史数据加载中…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
     </div>
 
     <!-- Forex strip -->
@@ -973,23 +1156,47 @@
 <script>
   /* ── Portfolio data (from backend) ─────────────────────────────── */
   let portfolioItems = [];
-  let totalCost = 0;
-  let totalMarketValue = 0;
-  let totalPnl = 0;
-  let totalPnlPct = 0;
-  let totalPnlCny = null;
+  let inputPoolRmb = null;
+  let inputPoolUsd = null;
+  let valuePoolUsd = null;
+  let valuePoolRmb = null;
+  let pnlUsd = null;
+  let pnlRmb = null;
+  let pnlPct = null;
 
   let forexRate = null;
   let walletMeta = null;
   let allocationChart = null;
+  let pnlHistoryChart = null;
+  let pnlHistoryItems = [];
+  let pnlHistoryRange = 30;
 
   /* ── Helpers ───────────────────────────────────────────────────── */
-  const f2 = n => (n ?? null) === null ? '--' : n.toFixed(2);
+  const f2 = n => {
+    const number = Number(n);
+    return Number.isFinite(number) ? number.toFixed(2) : '--';
+  };
   const clz = n => n > 0 ? 'pos' : n < 0 ? 'neg' : '';
-  const sign = n => n >= 0 ? '+' : '';
-  const usd  = n => n === null ? '--' : `${sign(n)}$${Math.abs(n).toFixed(2)}`;
-  const pct  = n => n === null ? '--' : `${sign(n)}${n.toFixed(2)}%`;
-  const cny  = n => n === null ? '--' : `${sign(n)}¥${Math.abs(n).toFixed(2)}`;
+  const absOrNull = n => n === null ? null : Math.abs(Number(n));
+  const usd  = n => n === null ? '--' : `$${Math.abs(n).toFixed(2)}`;
+  const pct  = n => n === null ? '--' : `${Math.abs(n).toFixed(2)}%`;
+  const cny  = n => n === null ? '--' : `¥${Math.abs(n).toFixed(2)}`;
+  const maybeNumber = value => {
+    if (value === null || value === undefined || value === '') return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  };
+  const moneyStack = (rmbValue, usdValue, compact = false) => {
+    const rmbText = rmbValue === null ? '--' : `¥${f2(rmbValue)}`;
+    const usdText = usdValue === null ? '--' : `≈ $${f2(usdValue)}`;
+    const stackClass = compact ? 'money-stack money-stack--compact' : 'money-stack';
+    return `<span class="${stackClass}"><span class="money-main">${rmbText}</span><span class="money-sub">${usdText}</span></span>`;
+  };
+  const moneyPair = (rmbValue, usdValue) => {
+    const rmbText = rmbValue === null ? '--' : `¥${f2(rmbValue)}`;
+    const usdText = usdValue === null ? '--' : `$${f2(usdValue)}`;
+    return `${rmbText} / ${usdText}`;
+  };
   const safeUrl = url => {
     const value = String(url ?? '').trim();
     if (/^https?:\/\//i.test(value)) return value;
@@ -1006,6 +1213,219 @@
     const value = String(address ?? '').trim();
     return value.length > 10 ? `${value.slice(0, 6)}…${value.slice(-4)}` : value;
   };
+
+  function normalizeHistoryItem(item) {
+    if (!item || typeof item !== 'object') return null;
+
+    const date = String(item.date ?? '').trim();
+    if (!date) return null;
+
+    const forexRateValue = maybeNumber(item.forexRate);
+    const legacyCostUsd = maybeNumber(item.totalCost);
+    const legacyMarketValueUsd = maybeNumber(item.totalMarketValue);
+
+    const capitalRmb = maybeNumber(item.capitalRmb ?? item.inputPoolRmb ?? item.totalCostRmb
+      ?? (Number.isFinite(legacyCostUsd) && Number.isFinite(forexRateValue) ? legacyCostUsd * forexRateValue : null));
+    const capitalUsd = maybeNumber(item.capitalUsd ?? item.inputPoolUsd ?? item.totalCostUsd ?? legacyCostUsd
+      ?? (Number.isFinite(capitalRmb) && Number.isFinite(forexRateValue) ? capitalRmb / forexRateValue : null));
+    const valuePoolUsd = maybeNumber(item.valuePoolUsd ?? item.totalMarketValueUsd ?? item.totalMarketValue ?? legacyMarketValueUsd);
+    const valuePoolRmb = maybeNumber(item.valuePoolRmb ?? item.totalMarketValueRmb
+      ?? (Number.isFinite(valuePoolUsd) && Number.isFinite(forexRateValue) ? valuePoolUsd * forexRateValue : null));
+    const totalPnlUsd = maybeNumber(item.totalPnlUsd ?? item.totalPnl
+      ?? (Number.isFinite(valuePoolUsd) && Number.isFinite(capitalUsd) ? valuePoolUsd - capitalUsd : null));
+    const totalPnlRmb = maybeNumber(item.totalPnlRmb ?? item.totalPnlCny
+      ?? (Number.isFinite(valuePoolRmb) && Number.isFinite(capitalRmb) ? valuePoolRmb - capitalRmb : null)
+      ?? (Number.isFinite(totalPnlUsd) && Number.isFinite(forexRateValue) ? totalPnlUsd * forexRateValue : null));
+    const totalPnlPct = maybeNumber(item.totalPnlPct
+      ?? (Number.isFinite(totalPnlUsd) && Number.isFinite(capitalUsd) && capitalUsd > 0 ? (totalPnlUsd / capitalUsd) * 100 : null));
+
+    return {
+      ...item,
+      date,
+      recordedAt: String(item.recordedAt ?? '').trim() || null,
+      capitalRmb,
+      capitalUsd,
+      inputPoolRmb: capitalRmb,
+      inputPoolUsd: capitalUsd,
+      valuePoolUsd,
+      valuePoolRmb,
+      totalCost: capitalUsd,
+      totalCostRmb: capitalRmb,
+      totalCostUsd: capitalUsd,
+      totalMarketValue: valuePoolUsd,
+      totalMarketValueRmb: valuePoolRmb,
+      totalMarketValueUsd: valuePoolUsd,
+      totalPnl: totalPnlUsd,
+      totalPnlUsd,
+      totalPnlRmb,
+      totalPnlPct,
+      totalPnlCny: totalPnlRmb,
+      forexRate: Number.isFinite(forexRateValue) ? forexRateValue : null,
+      win: Boolean(item.win),
+    };
+  }
+
+  function formatHistoryTimestamp(value) {
+    if (!value) return '--';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '--';
+
+    return date.toLocaleString('zh-CN', {
+      timeZone: 'Asia/Shanghai',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  function getVisiblePnlHistory() {
+    return pnlHistoryItems.slice(-pnlHistoryRange);
+  }
+
+  function updatePnlHistoryRangeButtons() {
+    document.querySelectorAll('#pnl-history-range button').forEach(btn => {
+      btn.classList.toggle('active', Number(btn.dataset.range) === pnlHistoryRange);
+    });
+  }
+
+  function renderPnlHistory() {
+    const chartEl = document.getElementById('pnl-history-chart');
+    const tbodyEl = document.getElementById('pnl-history-tbody');
+    const metaEl = document.getElementById('pnl-history-meta');
+    if (!chartEl || !tbodyEl || !metaEl) return;
+
+    const visibleRows = getVisiblePnlHistory();
+    updatePnlHistoryRangeButtons();
+
+    if (!visibleRows.length) {
+      metaEl.textContent = pnlHistoryItems.length
+        ? `已加载 ${pnlHistoryItems.length} 条历史记录，但当前范围内没有数据`
+        : '暂无历史数据';
+      tbodyEl.innerHTML = '<tr><td colspan="6" class="history-empty">暂无可用历史数据</td></tr>';
+
+      if (pnlHistoryChart) {
+        pnlHistoryChart.clear();
+        pnlHistoryChart.showLoading({ text: '暂无历史数据', color: '#818cf8', textColor: '#94a3b8', maskColor: 'rgba(255,255,255,0.05)' });
+      }
+      return;
+    }
+
+    const firstRow = visibleRows[0];
+    const lastRow = visibleRows[visibleRows.length - 1];
+    metaEl.textContent = `云端已回填 ${pnlHistoryItems.length} 条记录 · 当前显示最近 ${visibleRows.length} 天 · ${firstRow.date} 至 ${lastRow.date}`;
+
+    tbodyEl.innerHTML = visibleRows.map(row => {
+      const pnlRmbClass = clz(row.totalPnlRmb);
+      const pnlUsdClass = clz(row.totalPnl);
+      const pnlPctClass = clz(row.totalPnlPct);
+      return `<tr>
+        <td style="text-align:left;font-weight:600">${row.date}</td>
+        <td class="mono ${pnlRmbClass}">${row.totalPnlRmb !== null ? cny(row.totalPnlRmb) : '--'}</td>
+        <td class="mono ${pnlUsdClass}">${row.totalPnl !== null ? usd(row.totalPnl) : '--'}</td>
+        <td class="${pnlPctClass}">${row.totalPnlPct !== null ? pct(row.totalPnlPct) : '--'}</td>
+        <td class="mono">${moneyStack(row.valuePoolRmb, row.valuePoolUsd, true)}</td>
+        <td class="mono">${formatHistoryTimestamp(row.recordedAt)}</td>
+      </tr>`;
+    }).join('');
+
+    if (!pnlHistoryChart) return;
+
+    const seriesData = visibleRows.map(row => row.totalPnlRmb);
+    const numericSeries = seriesData.filter(Number.isFinite);
+    const lowerBound = numericSeries.length ? Math.min(...numericSeries, 0) : 0;
+    const upperBound = numericSeries.length ? Math.max(...numericSeries, 0) : 0;
+    const chartMin = lowerBound < 0 ? lowerBound * 1.08 : 0;
+    const chartMax = upperBound > 0 ? upperBound * 1.08 : 0;
+    const yAxisMin = chartMin === chartMax ? -1 : chartMin;
+    const yAxisMax = chartMin === chartMax ? 1 : chartMax;
+
+    pnlHistoryChart.hideLoading();
+    pnlHistoryChart.setOption({
+      animationDuration: 500,
+      backgroundColor: 'transparent',
+      grid: { left: 16, right: 18, top: 18, bottom: 44, containLabel: true },
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'line' },
+        backgroundColor: 'rgba(8,8,18,0.94)',
+        borderColor: 'rgba(255,255,255,0.1)',
+        textStyle: { color: '#f1f5f9' },
+        formatter: params => {
+          const point = Array.isArray(params) ? params[0] : params;
+          const row = visibleRows[point.dataIndex];
+          if (!row) return '';
+          return [
+            `<div style="font-weight:700;margin-bottom:4px">${row.date}</div>`,
+            `浮动盈亏(RMB): ${row.totalPnlRmb !== null ? cny(row.totalPnlRmb) : '--'}`,
+            `浮动盈亏(USD): ${row.totalPnl !== null ? usd(row.totalPnl) : '--'}`,
+            `盈亏比例: ${row.totalPnlPct !== null ? pct(row.totalPnlPct) : '--'}`,
+            `价值池: ${moneyPair(row.valuePoolRmb, row.valuePoolUsd)}`,
+          ].join('<br/>');
+        },
+      },
+      xAxis: {
+        type: 'category',
+        boundaryGap: false,
+        data: visibleRows.map(row => row.date),
+        axisLine: { lineStyle: { color: 'rgba(148,163,184,.35)' } },
+        axisLabel: { color: '#94a3b8', rotate: visibleRows.length > 14 ? 35 : 0 },
+        axisTick: { show: false },
+      },
+      yAxis: {
+        type: 'value',
+        scale: true,
+        axisLabel: {
+          color: '#94a3b8',
+          formatter: value => `¥${f2(value)}`,
+        },
+        splitLine: { lineStyle: { color: 'rgba(255,255,255,.06)' } },
+        min: yAxisMin,
+        max: yAxisMax,
+      },
+      series: [{
+        name: '浮动盈亏 (RMB)',
+        type: 'line',
+        smooth: true,
+        data: seriesData,
+        symbol: 'circle',
+        symbolSize: 7,
+        showSymbol: visibleRows.length <= 15,
+        lineStyle: { width: 3, color: '#818cf8' },
+        itemStyle: { color: '#818cf8' },
+        areaStyle: {
+          color: {
+            type: 'linear',
+            x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(129,140,248,.34)' },
+              { offset: 1, color: 'rgba(129,140,248,0)' },
+            ],
+          },
+        },
+        markLine: {
+          symbol: 'none',
+          silent: true,
+          data: [{ yAxis: 0 }],
+          lineStyle: { color: 'rgba(148,163,184,.35)', type: 'dashed' },
+        },
+      }],
+    }, { notMerge: true });
+  }
+
+  function setPnlHistoryRange(nextRange) {
+    pnlHistoryRange = Number(nextRange) === 7 ? 7 : 30;
+    renderPnlHistory();
+  }
+
+  async function fetchPnlHistory() {
+    const r = await fetch('/api/win-or-not/history');
+    const d = await r.json();
+    if (!d.success) throw new Error(d.error);
+
+    pnlHistoryItems = Array.isArray(d.items) ? d.items.map(normalizeHistoryItem).filter(Boolean) : [];
+    renderPnlHistory();
+  }
 
   /* ── US market hours (considers DST) ──────────────────────────── */
   function nthSundayUTC(year, month, n) {
@@ -1039,6 +1459,7 @@
 
     document.getElementById('tbody').innerHTML = rows.map(p => {
       const avg = Number.isFinite(p.avg) ? `$${f2(p.avg)}` : '--';
+      const cost = Number.isFinite(p.cost) && p.cost > 0 ? `$${f2(p.cost)}` : '--';
       return `<tr>
         <td>
           <div class="asset-cell">
@@ -1047,6 +1468,7 @@
           </div>
         </td>
         <td class="mono">--</td>
+        <td class="mono">${cost}</td>
         <td class="mono">${avg}</td>
         <td><span class="skel"></span></td>
         <td><span class="skel"></span></td>
@@ -1061,6 +1483,19 @@
       allocationChart.clear();
       allocationChart.showLoading({ text: '加载中...', color: '#818cf8', textColor: '#94a3b8', maskColor: 'rgba(255,255,255,0.05)' });
     }
+
+    if (pnlHistoryChart) {
+      pnlHistoryChart.clear();
+      pnlHistoryChart.showLoading({ text: '加载中...', color: '#818cf8', textColor: '#94a3b8', maskColor: 'rgba(255,255,255,0.05)' });
+    }
+
+    const historyTableEl = document.getElementById('pnl-history-tbody');
+    if (historyTableEl) {
+      historyTableEl.innerHTML = '<tr><td colspan="6" class="history-empty">历史数据加载中…</td></tr>';
+    }
+
+    const historyMetaEl = document.getElementById('pnl-history-meta');
+    if (historyMetaEl) historyMetaEl.textContent = '历史数据加载中…';
   }
 
   /* ── Render portfolio with live prices ─────────────────────────── */
@@ -1069,6 +1504,7 @@
     
     const rows = portfolioItems.map(p => {
       const balance = Number.isFinite(p.balance) ? p.balance : null;
+      const cost = Number.isFinite(p.cost) ? p.cost : null;
       const avg = Number.isFinite(p.avg) ? p.avg : (balance !== null && balance > 0 ? p.cost / balance : null);
       const price = Number.isFinite(p.price) ? p.price : null;
       const mval = Number.isFinite(p.marketValue) ? p.marketValue : null;
@@ -1079,6 +1515,7 @@
       }
 
       const priceCell = price !== null ? `<span class="mono">$${f2(price)}</span>` : '<span class="skel"></span>';
+  const costCell  = cost  !== null ? `<span class="mono">$${f2(cost)}</span>`  : '<span class="skel"></span>';
       const mvalCell  = mval  !== null ? `<span class="mono">$${f2(mval)}</span>`  : '<span class="skel"></span>';
       const plCell    = pl    !== null ? `<span class="mono ${clz(pl)}">${usd(pl)}</span>`  : '<span class="skel"></span>';
       const plpCell   = plp   !== null ? `<span class="${clz(plp)}">${pct(plp)}</span>`     : '<span class="skel"></span>';
@@ -1099,6 +1536,7 @@
           </div>
         </td>
         <td class="mono">${balanceText}</td>
+        <td>${costCell}</td>
         <td class="mono">${avg !== null ? `$${f2(avg)}` : '--'}</td>
         <td>${priceCell}</td>
         <td>${mvalCell}</td>
@@ -1109,31 +1547,33 @@
     document.getElementById('tbody').innerHTML = rows.join('');
 
     // Footer totals row
-    const totalPL  = totalPnl;
-    const totalPLp = totalPnlPct;
+    const totalPL = pnlUsd;
+    const totalPLp = pnlPct;
     document.getElementById('tfoot').innerHTML = `<tr>
-      <td colspan="4" style="text-align:left;color:var(--muted)">合计</td>
-      <td class="mono">$${f2(totalMarketValue)}</td>
+      <td colspan="5" style="text-align:left;color:var(--muted)">合计</td>
+      <td class="mono">${moneyStack(valuePoolRmb, valuePoolUsd, true)}</td>
       <td class="mono ${clz(totalPL)}">${usd(totalPL)}</td>
       <td class="${clz(totalPLp)}">${pct(totalPLp)}</td>
     </tr>`;
 
     /* Summary cards */
-    document.getElementById('sc-cost').textContent = `$${f2(totalCost)}`;
-    document.getElementById('sc-mktval').textContent = totalMarketValue !== null ? `$${f2(totalMarketValue)}` : '--';
-    document.getElementById('sc-mktval-cny').textContent = totalMarketValue !== null && forexRate ? `≈ ¥${f2(totalMarketValue * forexRate)}` : '汇率加载失败';
+    document.getElementById('sc-cost').innerHTML = moneyStack(inputPoolRmb, inputPoolUsd);
+    document.getElementById('sc-mktval').innerHTML = moneyStack(valuePoolRmb, valuePoolUsd);
+    document.getElementById('sc-mktval-cny').textContent = '按实时汇率折算';
 
     const pnlEl = document.getElementById('sc-pnl');
-    pnlEl.textContent = usd(totalPL);
-    pnlEl.className = `sc-val ${clz(totalPL)}`;
+    pnlEl.innerHTML = moneyStack(absOrNull(pnlRmb), absOrNull(totalPL));
+    pnlEl.className = `sc-val ${clz(pnlRmb)}`;
+
+    const pnlNoteEl = document.getElementById('sc-pnl-note');
+    pnlNoteEl.textContent = '按实时汇率折算';
 
     const pnlPctEl = document.getElementById('sc-pnl-pct');
     pnlPctEl.textContent = pct(totalPLp);
-    pnlPctEl.className = `sc-sub ${clz(totalPL)}`;
+    pnlPctEl.className = `sc-val ${clz(totalPLp)}`;
 
-    const pnlCnyEl = document.getElementById('sc-pnl-cny');
-    pnlCnyEl.textContent = totalPnlCny !== null ? cny(totalPnlCny) : '--';
-    pnlCnyEl.className = `sc-val ${clz(totalPL)}`;
+    const rateHintEl = document.getElementById('sc-rate-hint');
+    rateHintEl.textContent = forexRate ? `汇率: 1 USD = ¥${forexRate.toFixed(4)}` : '汇率加载失败';
 
     const walletMetaEl = document.getElementById('wallet-meta');
     if (walletMetaEl) {
@@ -1142,11 +1582,6 @@
           ? `只读钱包：${shortAddress(walletMeta.address)} · 同步失败`
           : `只读钱包：${shortAddress(walletMeta.address)} · ${walletMeta.chainLabel} · ${walletMeta.tokenCount} 个代币`)
         : '只读钱包：未加载';
-    }
-
-    const rateHintEl = document.getElementById('sc-rate-hint');
-    if (rateHintEl) {
-      rateHintEl.textContent = forexRate ? `汇率: 1 USD = ¥${forexRate.toFixed(4)}` : '汇率加载失败';
     }
     
     // Update chart
@@ -1207,21 +1642,47 @@
     const d = await r.json();
     if (!d.success) throw new Error(d.error);
 
+    const toNumber = value => {
+      if (value === null || value === undefined || value === '') return null;
+      const number = Number(value);
+      return Number.isFinite(number) ? number : null;
+    };
+
     portfolioItems = Array.isArray(d.items) ? d.items : [];
-    totalCost = Number(d.totalCost || 0);
-    totalMarketValue = d.totalMarketValue === null || d.totalMarketValue === undefined ? null : Number(d.totalMarketValue);
-    totalPnl = d.totalPnl === null || d.totalPnl === undefined ? null : Number(d.totalPnl);
-    totalPnlPct = d.totalPnlPct === null || d.totalPnlPct === undefined ? null : Number(d.totalPnlPct);
-    totalPnlCny = d.totalPnlCny === null || d.totalPnlCny === undefined ? null : Number(d.totalPnlCny);
-    forexRate = d.forexRate === null || d.forexRate === undefined ? null : Number(d.forexRate);
+    inputPoolRmb = toNumber(d.inputPoolRmb ?? d.capitalRmb ?? d.totalCostRmb);
+    inputPoolUsd = toNumber(d.inputPoolUsd ?? d.capitalUsd ?? d.totalCostUsd ?? d.totalCost);
+    valuePoolUsd = toNumber(d.valuePoolUsd ?? d.totalMarketValueUsd ?? d.totalMarketValue);
+    valuePoolRmb = toNumber(d.valuePoolRmb ?? d.totalMarketValueRmb);
+    pnlUsd = toNumber(d.totalPnlUsd ?? d.totalPnl);
+    pnlRmb = toNumber(d.totalPnlRmb ?? d.totalPnlCny);
+    pnlPct = toNumber(d.totalPnlPct);
+    forexRate = toNumber(d.forexRate);
+
+    if (inputPoolRmb === null && inputPoolUsd !== null && forexRate !== null) inputPoolRmb = inputPoolUsd * forexRate;
+    if (inputPoolUsd === null && inputPoolRmb !== null && forexRate !== null) inputPoolUsd = inputPoolRmb / forexRate;
+    if (valuePoolRmb === null && valuePoolUsd !== null && forexRate !== null) valuePoolRmb = valuePoolUsd * forexRate;
+    if (valuePoolUsd === null && valuePoolRmb !== null && forexRate !== null) valuePoolUsd = valuePoolRmb / forexRate;
+    if (pnlUsd === null) {
+      const hasPnlItems = portfolioItems.some(item => Number.isFinite(Number(item.pnl)));
+      if (hasPnlItems) {
+        pnlUsd = portfolioItems.reduce((sum, item) => sum + (Number.isFinite(Number(item.pnl)) ? Number(item.pnl) : 0), 0);
+      }
+    }
+    if (pnlRmb === null && pnlUsd !== null && forexRate !== null) pnlRmb = pnlUsd * forexRate;
+    if (pnlPct === null && pnlUsd !== null) {
+      const costBasisUsd = portfolioItems.reduce((sum, item) => sum + (Number.isFinite(Number(item.cost)) ? Number(item.cost) : 0), 0);
+      if (costBasisUsd > 0) pnlPct = (pnlUsd / costBasisUsd) * 100;
+    }
     walletMeta = d.wallet || null;
 
-    document.getElementById('sc-cost').textContent = `$${f2(totalCost)}`;
-    document.getElementById('sc-mktval').textContent = totalMarketValue !== null ? `$${f2(totalMarketValue)}` : '--';
-    document.getElementById('sc-mktval-cny').textContent = totalMarketValue !== null && forexRate ? `≈ ¥${f2(totalMarketValue * forexRate)}` : '汇率加载失败';
-    document.getElementById('sc-pnl').textContent = usd(totalPnl);
-    document.getElementById('sc-pnl-pct').textContent = pct(totalPnlPct);
-    document.getElementById('sc-pnl-cny').textContent = totalPnlCny !== null ? cny(totalPnlCny) : '--';
+    document.getElementById('sc-cost').innerHTML = moneyStack(inputPoolRmb, inputPoolUsd);
+    document.getElementById('sc-mktval').innerHTML = moneyStack(valuePoolRmb, valuePoolUsd);
+    document.getElementById('sc-mktval-cny').textContent = '按实时汇率折算';
+    document.getElementById('sc-pnl').innerHTML = moneyStack(absOrNull(pnlRmb), absOrNull(pnlUsd));
+    document.getElementById('sc-pnl').className = `sc-val ${clz(pnlRmb)}`;
+    document.getElementById('sc-pnl-note').textContent = '按实时汇率折算';
+    document.getElementById('sc-pnl-pct').textContent = pct(pnlPct);
+    document.getElementById('sc-pnl-pct').className = `sc-val ${clz(pnlPct)}`;
     document.getElementById('sc-rate-hint').textContent = forexRate ? `汇率: 1 USD = ¥${forexRate.toFixed(4)}` : '汇率加载失败';
     document.getElementById('fr-rate').textContent = forexRate ? `1 USD ≈ ${forexRate.toFixed(4)} CNY` : '加载失败';
     const walletMetaEl = document.getElementById('wallet-meta');
@@ -1396,6 +1857,7 @@
   window.addEventListener('resize', () => {
     if (travelMapChart) travelMapChart.resize();
     if (allocationChart) allocationChart.resize();
+    if (pnlHistoryChart) pnlHistoryChart.resize();
   });
 
   /* ── Update market badge ───────────────────────────────────────── */
@@ -1419,6 +1881,11 @@
 
       await Promise.all([
         fetchNews().catch(e => { console.error('[news]', e); }),
+        fetchPnlHistory().catch(e => {
+          console.error('[pnl-history]', e);
+          pnlHistoryItems = [];
+          renderPnlHistory();
+        }),
       ]);
 
       if (!portfolioItems.length) {
@@ -1443,6 +1910,20 @@
     const chartEl = document.getElementById('allocation-chart');
     if (chartEl && window.echarts) {
       allocationChart = window.echarts.init(chartEl);
+    }
+
+    const historyChartEl = document.getElementById('pnl-history-chart');
+    if (historyChartEl && window.echarts) {
+      pnlHistoryChart = window.echarts.init(historyChartEl);
+    }
+
+    const historyRangeEl = document.getElementById('pnl-history-range');
+    if (historyRangeEl) {
+      historyRangeEl.addEventListener('click', event => {
+        const button = event.target.closest('button[data-range]');
+        if (!button) return;
+        setPnlHistoryRange(button.dataset.range);
+      });
     }
   })();
 
