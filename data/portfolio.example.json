@@ -2,31 +2,31 @@
   {
     "label": "UBERON",
     "ticker": "UBER",
-    "shares": 1.83047,
-    "cost": 150
+    "cost": 150,
+    "enabled": true
   },
   {
     "label": "TQQQON",
     "ticker": "TQQQ",
-    "shares": 0.47427,
-    "cost": 25
+    "cost": 25,
+    "enabled": true
   },
   {
     "label": "COINON",
     "ticker": "COIN",
-    "shares": 0.59994,
-    "cost": 100
+    "cost": 100,
+    "enabled": true
   },
   {
     "label": "BABAON",
     "ticker": "BABA",
-    "shares": 0.54909,
-    "cost": 75
+    "cost": 75,
+    "enabled": true
   },
   {
     "label": "GLDON",
     "ticker": "GLD",
-    "shares": 0.12109,
-    "cost": 50
+    "cost": 50,
+    "enabled": false
   }
 ]

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="曾展鹏的个人作品集与美股投资看板" />
+  <meta name="description" content="曾展鹏的个人作品集、只读 Web3 钱包与投资看板" />
   <title>Shareyee | 曾展鹏 · David Zeng</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -252,6 +252,45 @@
     }
 
     .last-upd { font-size: .72rem; color: var(--muted); }
+    .wallet-meta {
+      font-size: .72rem;
+      color: var(--text-2);
+      padding: 5px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border-2);
+      background: rgba(255,255,255,.03);
+    }
+
+    .asset-cell {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .asset-visual {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      border: 1px solid var(--border-2);
+      background: rgba(255,255,255,.04);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .asset-visual img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .asset-logo-fallback {
+      font-size: .72rem;
+      font-weight: 800;
+      letter-spacing: .6px;
+      color: var(--text);
+    }
 
     .refresh-btn {
       background: rgba(129,140,248,.1);
@@ -800,6 +839,7 @@
           <div class="mkt-dot"></div>
           <span id="mkt-text">检测中…</span>
         </div>
+        <div class="wallet-meta" id="wallet-meta">只读钱包：加载中…</div>
         <div class="last-upd" id="last-upd">—</div>
       </div>
       <button class="refresh-btn" id="refresh-btn" onclick="loadData()">
@@ -815,7 +855,7 @@
           <thead>
             <tr>
               <th style="text-align:left">资产名称</th>
-              <th>持有份数</th>
+              <th>持有数量</th>
               <th>平均成本</th>
               <th>当前价格</th>
               <th>持仓市值</th>
@@ -830,7 +870,7 @@
 
       <!-- Allocation Chart -->
       <div class="chart-wrap">
-        <div class="chart-title">持仓市值占比</div>
+        <div class="chart-title">价值池占比</div>
         <div id="allocation-chart" style="flex:1; min-height: 250px;"></div>
       </div>
     </div>
@@ -838,22 +878,22 @@
     <!-- Summary cards -->
     <div class="summary-grid">
       <div class="sum-card">
-        <div class="sc-label">总投入</div>
+        <div class="sc-label">投入池</div>
         <div class="sc-val" id="sc-cost"><span class="skel"></span></div>
-        <div class="sc-sub">持仓总成本（来自私有配置）</div>
+        <div class="sc-sub">钱包持仓成本合计</div>
       </div>
       <div class="sum-card">
-        <div class="sc-label">当前市值</div>
+        <div class="sc-label">价值池</div>
         <div class="sc-val" id="sc-mktval"><span class="skel"></span></div>
-        <div class="sc-sub" id="sc-mktval-cny">—</div>
+        <div class="sc-sub" id="sc-mktval-cny">钱包当前估值</div>
       </div>
       <div class="sum-card">
-        <div class="sc-label">总盈亏 (USD)</div>
+        <div class="sc-label">浮动盈亏 (USD)</div>
         <div class="sc-val" id="sc-pnl"><span class="skel"></span></div>
         <div class="sc-sub" id="sc-pnl-pct">—</div>
       </div>
       <div class="sum-card">
-        <div class="sc-label">总盈亏 (RMB)</div>
+        <div class="sc-label">浮动盈亏 (RMB)</div>
         <div class="sc-val" id="sc-pnl-cny"><span class="skel"></span></div>
         <div class="sc-sub" id="sc-rate-hint">汇率加载中…</div>
       </div>
@@ -869,7 +909,7 @@
     </div>
 
     <!-- News -->
-    <div class="news-head">🌍 全球头条新闻</div>
+    <div class="news-head">📰 财联社最有影响力的 3 条新闻</div>
     <div class="news-grid" id="news-grid">
       <div class="news-card"><div class="skel" style="width:100%;height:100px"></div></div>
       <div class="news-card"><div class="skel" style="width:100%;height:100px"></div></div>
@@ -934,8 +974,13 @@
   /* ── Portfolio data (from backend) ─────────────────────────────── */
   let portfolioItems = [];
   let totalCost = 0;
+  let totalMarketValue = 0;
+  let totalPnl = 0;
+  let totalPnlPct = 0;
+  let totalPnlCny = null;
 
   let forexRate = null;
+  let walletMeta = null;
   let allocationChart = null;
 
   /* ── Helpers ───────────────────────────────────────────────────── */
@@ -945,6 +990,22 @@
   const usd  = n => n === null ? '--' : `${sign(n)}$${Math.abs(n).toFixed(2)}`;
   const pct  = n => n === null ? '--' : `${sign(n)}${n.toFixed(2)}%`;
   const cny  = n => n === null ? '--' : `${sign(n)}¥${Math.abs(n).toFixed(2)}`;
+  const safeUrl = url => {
+    const value = String(url ?? '').trim();
+    if (/^https?:\/\//i.test(value)) return value;
+    if (/^\/(?!\/)/.test(value)) return value;
+    if (/^data:image\//i.test(value)) return value;
+    return '';
+  };
+  const escAttr = s => String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+  const shortAddress = address => {
+    const value = String(address ?? '').trim();
+    return value.length > 10 ? `${value.slice(0, 6)}…${value.slice(-4)}` : value;
+  };
 
   /* ── US market hours (considers DST) ──────────────────────────── */
   function nthSundayUTC(year, month, n) {
@@ -971,17 +1032,22 @@
   /* ── Skeleton rows ─────────────────────────────────────────────── */
   function renderLoading() {
     const rows = portfolioItems.length > 0 ? portfolioItems : [
-      { label: 'ASSET', ticker: 'TICKER', shares: 0, cost: 0 },
-      { label: 'ASSET', ticker: 'TICKER', shares: 0, cost: 0 },
-      { label: 'ASSET', ticker: 'TICKER', shares: 0, cost: 0 },
+      { label: 'ASSET', ticker: 'TICKER', balance: 0, cost: 0, avg: null, price: null, marketValue: null, pnl: null, pnlPct: null },
+      { label: 'ASSET', ticker: 'TICKER', balance: 0, cost: 0, avg: null, price: null, marketValue: null, pnl: null, pnlPct: null },
+      { label: 'ASSET', ticker: 'TICKER', balance: 0, cost: 0, avg: null, price: null, marketValue: null, pnl: null, pnlPct: null },
     ];
 
     document.getElementById('tbody').innerHTML = rows.map(p => {
-      const avg = p.shares > 0 ? (p.cost / p.shares).toFixed(2) : '--';
+      const avg = Number.isFinite(p.avg) ? `$${f2(p.avg)}` : '--';
       return `<tr>
-        <td><div class="asset-name">${p.label}</div><div class="asset-ticker">${p.ticker}</div></td>
-        <td class="mono">${p.shares > 0 ? p.shares.toFixed(5) : '--'}</td>
-        <td class="mono">${avg === '--' ? '--' : `$${avg}`}</td>
+        <td>
+          <div class="asset-cell">
+            <div class="asset-visual"><span class="asset-logo-fallback">${escAttr((p.ticker || p.label || '?').slice(0, 1))}</span></div>
+            <div><div class="asset-name">${p.label}</div></div>
+          </div>
+        </td>
+        <td class="mono">--</td>
+        <td class="mono">${avg}</td>
         <td><span class="skel"></span></td>
         <td><span class="skel"></span></td>
         <td><span class="skel"></span></td>
@@ -998,18 +1064,17 @@
   }
 
   /* ── Render portfolio with live prices ─────────────────────────── */
-  function renderPortfolio(prices) {
-    let totalMktVal = 0;
+  function renderPortfolio() {
     const chartData = [];
     
     const rows = portfolioItems.map(p => {
-      const avg   = p.cost / p.shares;
-      const price = prices?.[p.ticker] ?? null;
-      const mval  = price !== null ? price * p.shares : null;
-      const pl    = mval  !== null ? mval - p.cost    : null;
-      const plp   = pl    !== null ? (pl / p.cost) * 100 : null;
-      if (mval !== null) {
-        totalMktVal += mval;
+      const balance = Number.isFinite(p.balance) ? p.balance : null;
+      const avg = Number.isFinite(p.avg) ? p.avg : (balance !== null && balance > 0 ? p.cost / balance : null);
+      const price = Number.isFinite(p.price) ? p.price : null;
+      const mval = Number.isFinite(p.marketValue) ? p.marketValue : null;
+      const pl = Number.isFinite(p.pnl) ? p.pnl : null;
+      const plp = Number.isFinite(p.pnlPct) ? p.pnlPct : null;
+      if (mval !== null && mval > 0) {
         chartData.push({ name: p.ticker, value: mval });
       }
 
@@ -1017,11 +1082,24 @@
       const mvalCell  = mval  !== null ? `<span class="mono">$${f2(mval)}</span>`  : '<span class="skel"></span>';
       const plCell    = pl    !== null ? `<span class="mono ${clz(pl)}">${usd(pl)}</span>`  : '<span class="skel"></span>';
       const plpCell   = plp   !== null ? `<span class="${clz(plp)}">${pct(plp)}</span>`     : '<span class="skel"></span>';
+      const logoUrl   = safeUrl(p.logo);
+      const fallback  = escAttr((p.ticker || p.label || '?').slice(0, 1));
+      const balanceText = p.balanceDisplay || (balance !== null ? balance.toFixed(5) : '--');
 
       return `<tr>
-        <td><div class="asset-name">${p.label}</div><div class="asset-ticker">${p.ticker}</div></td>
-        <td class="mono">${p.shares.toFixed(5)}</td>
-        <td class="mono">$${f2(avg)}</td>
+        <td>
+          <div class="asset-cell">
+            <div class="asset-visual">
+              ${logoUrl ? `<img src="${escAttr(logoUrl)}" alt="${escAttr(p.label)} logo" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />` : ''}
+              <span class="asset-logo-fallback" style="${logoUrl ? 'display:none;' : ''}">${fallback}</span>
+            </div>
+            <div>
+              <div class="asset-name">${p.label}</div>
+            </div>
+          </div>
+        </td>
+        <td class="mono">${balanceText}</td>
+        <td class="mono">${avg !== null ? `$${f2(avg)}` : '--'}</td>
         <td>${priceCell}</td>
         <td>${mvalCell}</td>
         <td>${plCell}</td>
@@ -1031,18 +1109,19 @@
     document.getElementById('tbody').innerHTML = rows.join('');
 
     // Footer totals row
-    const totalPL  = totalMktVal - totalCost;
-    const totalPLp = totalCost > 0 ? (totalPL / totalCost) * 100 : 0;
+    const totalPL  = totalPnl;
+    const totalPLp = totalPnlPct;
     document.getElementById('tfoot').innerHTML = `<tr>
       <td colspan="4" style="text-align:left;color:var(--muted)">合计</td>
-      <td class="mono">$${f2(totalMktVal)}</td>
+      <td class="mono">$${f2(totalMarketValue)}</td>
       <td class="mono ${clz(totalPL)}">${usd(totalPL)}</td>
       <td class="${clz(totalPLp)}">${pct(totalPLp)}</td>
     </tr>`;
 
     /* Summary cards */
-    document.getElementById('sc-mktval').textContent = `$${f2(totalMktVal)}`;
-    if (forexRate) document.getElementById('sc-mktval-cny').textContent = `≈ ¥${f2(totalMktVal * forexRate)}`;
+    document.getElementById('sc-cost').textContent = `$${f2(totalCost)}`;
+    document.getElementById('sc-mktval').textContent = totalMarketValue !== null ? `$${f2(totalMarketValue)}` : '--';
+    document.getElementById('sc-mktval-cny').textContent = totalMarketValue !== null && forexRate ? `≈ ¥${f2(totalMarketValue * forexRate)}` : '汇率加载失败';
 
     const pnlEl = document.getElementById('sc-pnl');
     pnlEl.textContent = usd(totalPL);
@@ -1052,10 +1131,22 @@
     pnlPctEl.textContent = pct(totalPLp);
     pnlPctEl.className = `sc-sub ${clz(totalPL)}`;
 
-    if (forexRate) {
-      const pnlCnyEl = document.getElementById('sc-pnl-cny');
-      pnlCnyEl.textContent = cny(totalPL * forexRate);
-      pnlCnyEl.className = `sc-val ${clz(totalPL)}`;
+    const pnlCnyEl = document.getElementById('sc-pnl-cny');
+    pnlCnyEl.textContent = totalPnlCny !== null ? cny(totalPnlCny) : '--';
+    pnlCnyEl.className = `sc-val ${clz(totalPL)}`;
+
+    const walletMetaEl = document.getElementById('wallet-meta');
+    if (walletMetaEl) {
+      walletMetaEl.textContent = walletMeta
+        ? (walletMeta.syncStatus === 'error'
+          ? `只读钱包：${shortAddress(walletMeta.address)} · 同步失败`
+          : `只读钱包：${shortAddress(walletMeta.address)} · ${walletMeta.chainLabel} · ${walletMeta.tokenCount} 个代币`)
+        : '只读钱包：未加载';
+    }
+
+    const rateHintEl = document.getElementById('sc-rate-hint');
+    if (rateHintEl) {
+      rateHintEl.textContent = forexRate ? `汇率: 1 USD = ¥${forexRate.toFixed(4)}` : '汇率加载失败';
     }
     
     // Update chart
@@ -1118,25 +1209,29 @@
 
     portfolioItems = Array.isArray(d.items) ? d.items : [];
     totalCost = Number(d.totalCost || 0);
+    totalMarketValue = d.totalMarketValue === null || d.totalMarketValue === undefined ? null : Number(d.totalMarketValue);
+    totalPnl = d.totalPnl === null || d.totalPnl === undefined ? null : Number(d.totalPnl);
+    totalPnlPct = d.totalPnlPct === null || d.totalPnlPct === undefined ? null : Number(d.totalPnlPct);
+    totalPnlCny = d.totalPnlCny === null || d.totalPnlCny === undefined ? null : Number(d.totalPnlCny);
+    forexRate = d.forexRate === null || d.forexRate === undefined ? null : Number(d.forexRate);
+    walletMeta = d.wallet || null;
+
     document.getElementById('sc-cost').textContent = `$${f2(totalCost)}`;
-  }
-
-  async function fetchStocks() {
-    const r = await fetch('/api/stocks');
-    const d = await r.json();
-    if (!d.success) throw new Error(d.error);
-    const prices = {};
-    for (const [t, info] of Object.entries(d.data)) prices[t] = info.price;
-    return prices;
-  }
-
-  async function fetchForex() {
-    const r = await fetch('/api/forex');
-    const d = await r.json();
-    if (!d.success) throw new Error(d.error);
-    forexRate = d.rate;
-    document.getElementById('fr-rate').textContent = `1 USD ≈ ${d.rate.toFixed(4)} CNY`;
-    document.getElementById('sc-rate-hint').textContent = `汇率: 1 USD = ¥${d.rate.toFixed(4)}`;
+    document.getElementById('sc-mktval').textContent = totalMarketValue !== null ? `$${f2(totalMarketValue)}` : '--';
+    document.getElementById('sc-mktval-cny').textContent = totalMarketValue !== null && forexRate ? `≈ ¥${f2(totalMarketValue * forexRate)}` : '汇率加载失败';
+    document.getElementById('sc-pnl').textContent = usd(totalPnl);
+    document.getElementById('sc-pnl-pct').textContent = pct(totalPnlPct);
+    document.getElementById('sc-pnl-cny').textContent = totalPnlCny !== null ? cny(totalPnlCny) : '--';
+    document.getElementById('sc-rate-hint').textContent = forexRate ? `汇率: 1 USD = ¥${forexRate.toFixed(4)}` : '汇率加载失败';
+    document.getElementById('fr-rate').textContent = forexRate ? `1 USD ≈ ${forexRate.toFixed(4)} CNY` : '加载失败';
+    const walletMetaEl = document.getElementById('wallet-meta');
+    if (walletMetaEl) {
+      walletMetaEl.textContent = walletMeta
+        ? (walletMeta.syncStatus === 'error'
+          ? `只读钱包：${shortAddress(walletMeta.address)} · 同步失败`
+          : `只读钱包：${shortAddress(walletMeta.address)} · ${walletMeta.chainLabel} · ${walletMeta.tokenCount} 个代币`)
+        : '只读钱包：未加载';
+    }
   }
 
   async function fetchNews() {
@@ -1322,22 +1417,20 @@
       await fetchPortfolioDefinition();
       renderLoading();
 
-      const [prices] = await Promise.all([
-        fetchStocks().catch(e => { console.error('[stocks]', e); return null; }),
-        fetchForex().catch(e  => { console.error('[forex]',  e); }),
-        fetchNews().catch(e   => { console.error('[news]',   e); }),
+      await Promise.all([
+        fetchNews().catch(e => { console.error('[news]', e); }),
       ]);
 
       if (!portfolioItems.length) {
         throw new Error('持仓列表为空，请检查后端配置文件');
       }
 
-      renderPortfolio(prices);
+      renderPortfolio();
       document.getElementById('last-upd').textContent =
         `最后更新: ${new Date().toLocaleString('zh-CN')}`;
     } catch (err) {
       console.error('[loadData]', err);
-      document.getElementById('tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted)">持仓配置加载失败，请检查服务器日志</td></tr>';
+      document.getElementById('tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted)">钱包配置加载失败，请检查服务器日志</td></tr>';
       document.getElementById('tfoot').innerHTML = '';
     } finally {
       btn.classList.remove('loading');
@@ -1429,8 +1522,8 @@
   renderTravelMap();
 
   loadData();
-  // Auto-refresh every 5 minutes
-  setInterval(loadData, 5 * 60 * 1000);
+  // Auto-refresh every 15 minutes
+  setInterval(loadData, 15 * 60 * 1000);
 </script>
 </body>
 </html>
