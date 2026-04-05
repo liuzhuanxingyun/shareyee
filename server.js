@@ -2,7 +2,6 @@ import express            from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { readFile, writeFile, mkdir } from 'fs/promises';
-import Parser            from 'rss-parser';
 import cron              from 'node-cron';
 import nodemailer        from 'nodemailer';
 import dotenv            from 'dotenv';
@@ -14,7 +13,6 @@ const __dirname  = dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const rss  = new Parser();
 const NEWS_TIMEOUT_MS = 6000;
 const EMAIL_TIMEZONE = 'Asia/Shanghai';
 const MAP_FETCH_TIMEOUT_MS = 8000;
@@ -208,224 +206,73 @@ function extractMetaContent(html, names) {
   return null;
 }
 
-function extractClsTitle(html) {
-  const metaTitle = extractMetaContent(html, ['og:title', 'twitter:title']);
-  if (metaTitle) return metaTitle.replace(/\s*[-|_]\s*财联社(?:.*)?$/i, '').trim();
+function toIsoTimestamp(value) {
+  if (value == null || value === '') return null;
 
-  const h1Match = String(html ?? '').match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
-  if (h1Match?.[1]) {
-    const text = cleanText(h1Match[1]);
-    if (text) return text.replace(/\s*[-|_]\s*财联社(?:.*)?$/i, '').trim();
+  if (typeof value === 'number' || /^\d+$/.test(String(value))) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return null;
+    const ms = number > 1e12 ? number : number * 1000;
+    const parsed = new Date(ms);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
   }
 
-  const titleMatch = String(html ?? '').match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-  if (titleMatch?.[1]) {
-    const text = cleanText(titleMatch[1]);
-    if (text) return text.replace(/\s*[-|_\|]\s*财联社(?:.*)?$/i, '').trim();
-  }
-
-  return '';
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 }
 
-function findBestTextOccurrence(text, needle) {
-  let bestIndex = -1;
-  let bestScore = -Infinity;
-  let searchIndex = 0;
-
-  while (searchIndex >= 0) {
-    const index = String(text ?? '').indexOf(needle, searchIndex);
-    if (index < 0) break;
-
-    const window = String(text ?? '').slice(index, index + needle.length + 240);
-    let score = 0;
-
-    if (/财联社/.test(window)) score += 4;
-    if (/日电/.test(window)) score += 4;
-    if (/\d{4}年|\d{2}:\d{2}:\d{2}/.test(window)) score += 3;
-    if (/央视新闻|新华社|路透社|韩联社|美联社/.test(window)) score += 2;
-    if (/收藏|评论|责任编辑|我要评论/.test(window)) score -= 3;
-
-    if (score > bestScore) {
-      bestScore = score;
-      bestIndex = index;
-    }
-
-    searchIndex = index + needle.length;
-  }
-
-  return bestIndex;
+function normalizeWscnSummary(item, title = '') {
+  const raw = item?.content_text || item?.content || item?.reference || '';
+  const text = cleanText(raw).replace(/\s+/g, ' ').trim();
+  if (!text) return title;
+  return text.slice(0, 180);
 }
 
-function extractClsSummary(html, title = '') {
-  const metaSummary = extractMetaContent(html, ['og:description', 'description']);
-  if (metaSummary && metaSummary.length > 20 && metaSummary !== title) {
-    return metaSummary;
-  }
-
-  const stripped = stripHtml(html);
-  const leadMatch = stripped.match(/财联社(?:\d{1,2}月\d{1,2}日电|\d{4}年\d{1,2}月\d{1,2}日电)[，,\s]*/u);
-  if (leadMatch?.index !== undefined) {
-    const leadText = trimClsBoilerplate(stripped.slice(leadMatch.index));
-    if (leadText.length > 20) {
-      return leadText.slice(0, 180);
-    }
-  }
-
-  if (title) {
-    const titleIndex = findBestTextOccurrence(stripped, title);
-    if (titleIndex >= 0) {
-      const afterTitle = trimClsBoilerplate(stripped.slice(titleIndex + title.length))
-        .replace(/^财联社\d{1,2}月\d{1,2}日电[，,\s]*/u, '')
-        .replace(/^财联社\d{4}年\d{1,2}月\d{1,2}日电[，,\s]*/u, '')
-        .replace(/^\d{4}年\d{1,2}月\d{1,2}日\s*\d{2}:\d{2}:\d{2}\s*(?:星期.)?\s*/u, '');
-
-      if (afterTitle.length > 20) {
-        return afterTitle.slice(0, 180);
-      }
-    }
-  }
-
-  const paragraphMatches = [...String(html ?? '').matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)]
-    .map(match => trimClsBoilerplate(match[1]))
-    .filter(text => text && text.length > 20 && !/^首页|^注册|^登录|^关于我们/.test(text));
-
-  const paragraph = paragraphMatches.find(text => !title || !text.includes(title)) || paragraphMatches[0];
-  if (paragraph) return paragraph.slice(0, 180);
-
-  const fallbackStripped = trimClsBoilerplate(stripHtml(html).replace(title, '').trim());
-  if (fallbackStripped) return fallbackStripped.slice(0, 180);
-
-  return title;
+function normalizeWscnLink(item) {
+  if (isHttpUrl(item?.uri)) return String(item.uri).trim();
+  if (item?.id) return `https://wallstreetcn.com/livenews/${item.id}`;
+  return 'https://wallstreetcn.com/livenews';
 }
 
-function extractClsPublishedAt(html, fallbackDate = '') {
-  const metaDate = extractMetaContent(html, ['article:published_time', 'og:updated_time', 'pubdate', 'publishdate', 'date']);
-  if (metaDate) {
-    const parsed = new Date(metaDate);
-    if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
-  }
-
-  const text = stripHtml(html);
-  const match = text.match(/(20\d{2})[.\-/年](\d{1,2})[.\-/月](\d{1,2})[日\s]+(?:星期.)?\s*(\d{2}):(\d{2}):(\d{2})/);
-  if (match) {
-    const [, year, month, day, hour, minute, second] = match;
-    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hour}:${minute}:${second}+08:00`;
-  }
-
-  if (fallbackDate) {
-    return `${fallbackDate}T00:00:00+08:00`;
-  }
-
-  return null;
-}
-
-function trimClsBoilerplate(value) {
-  let text = cleanText(value);
-  const boilerplatePattern = /^(?:关于我们|网站声明|联系方式|用户反馈|网站地图|帮助|首页|电报|话题|盯盘|VIP|FM|投研|下载|全部|加红|公司|看盘|港美股|基金|ETF|提醒|头条|A股|港股|环球|券商|基金·ETF|地产|金融|汽车|科创|品见)(?:\s+|·|、)+/u;
-
-  while (boilerplatePattern.test(text)) {
-    text = text.replace(boilerplatePattern, '').trim();
-  }
-
-  text = text.replace(/\s+(?:收藏|我要评论|反馈意见|图片|欢迎您发表有价值的评论|发表评论|关联话题).*/u, '').trim();
-
-  return text;
-}
-
-function extractSitemapEntries(xml) {
-  const entries = [];
-  const urlPattern = /<url>[\s\S]*?<loc>(.*?)<\/loc>[\s\S]*?(?:<lastmod>(.*?)<\/lastmod>)?[\s\S]*?<\/url>/gi;
-  let match;
-
-  while ((match = urlPattern.exec(String(xml ?? '')))) {
-    const loc = cleanText(match[1]);
-    const lastmod = cleanText(match[2] || '');
-    if (loc) entries.push({ loc, lastmod });
-  }
-
-  return entries;
-}
-
-async function fetchClsDetailNews(detailUrl, fallbackDate = '') {
-  const html = await fetchTextWithUA(detailUrl, NEWS_TIMEOUT_MS);
-  const title = extractClsTitle(html);
-
-  if (!title) {
-    throw new Error(`Unable to parse CLS title for ${detailUrl}`);
-  }
-
-  return {
-    title,
-    summary: extractClsSummary(html, title),
-    link: detailUrl,
-    pubDate: extractClsPublishedAt(html, fallbackDate),
-    source: '财联社',
-    feedSource: '财联社月度 sitemap',
-  };
-}
-
-async function fetchClsNews(limit = 3) {
-  const monthCandidates = [chinaYearMonth(), previousChinaYearMonth()];
-
-  for (const monthKey of monthCandidates) {
-    const sitemapUrl = `https://www.cls.cn/baidu/${monthKey}/sitemap.xml`;
-
-    try {
-      const xml = await fetchTextWithUA(sitemapUrl, NEWS_TIMEOUT_MS);
-      const entries = extractSitemapEntries(xml)
-        .filter(entry => /\/detail\/\d+/.test(entry.loc));
-
-      if (!entries.length) continue;
-
-      const selected = [];
-      const seen = new Set();
-      for (const entry of entries) {
-        if (seen.has(entry.loc)) continue;
-        seen.add(entry.loc);
-        selected.push(entry);
-        if (selected.length >= limit) break;
-      }
-
-      const items = (await Promise.all(selected.map(entry =>
-        fetchClsDetailNews(entry.loc, entry.lastmod).catch(err => {
-          console.error('[news] CLS detail:', entry.loc, err.message);
-          return null;
-        })
-      ))).filter(Boolean);
-
-      if (items.length) return items.slice(0, limit);
-    } catch (err) {
-      console.error('[news] CLS sitemap:', sitemapUrl, err.message);
-    }
-  }
+async function fetchWscnNews(limit = 3) {
+  const safeLimit = Math.min(Math.max(Number(limit) || 3, 1), 10);
+  const requestLimit = Math.min(Math.max(safeLimit * 5, safeLimit), 50);
+  const endpoint = new URL('https://api-one-wscn.awtmt.com/apiv1/content/lives');
+  endpoint.searchParams.set('channel', 'global-channel');
+  endpoint.searchParams.set('page', '1');
+  endpoint.searchParams.set('limit', String(requestLimit));
 
   try {
-    const telegraphHtml = await fetchTextWithUA('https://www.cls.cn/telegraph', NEWS_TIMEOUT_MS);
-    const telegraphMatches = [...telegraphHtml.matchAll(/<a[^>]+href=["'](https:\/\/www\.cls\.cn\/detail\/\d+)["'][^>]*>([\s\S]*?)<\/a>/gi)];
-    const selected = [];
-    const seen = new Set();
+    const payload = await fetchJsonWithUA(endpoint.toString(), NEWS_TIMEOUT_MS);
+    const rawItems = Array.isArray(payload?.data?.items) ? payload.data.items : [];
+    const seenLinks = new Set();
+    const items = [];
 
-    for (const match of telegraphMatches) {
-      const link = match[1];
-      if (seen.has(link)) continue;
-      seen.add(link);
-      selected.push(link);
-      if (selected.length >= limit) break;
+    for (const item of rawItems) {
+      const title = cleanText(item?.title || item?.highlight_title || '');
+      if (!title) continue;
+
+      const link = normalizeWscnLink(item);
+      if (seenLinks.has(link)) continue;
+      seenLinks.add(link);
+
+      items.push({
+        title,
+        summary: normalizeWscnSummary(item, title),
+        link,
+        pubDate: toIsoTimestamp(item?.display_time || item?.published_at || item?.created_at),
+        source: '华尔街见闻',
+        feedSource: '华尔街见闻快讯 API',
+      });
+
+      if (items.length >= safeLimit) break;
     }
 
-    const items = (await Promise.all(selected.map(link =>
-      fetchClsDetailNews(link).catch(err => {
-        console.error('[news] CLS telegraph detail:', link, err.message);
-        return null;
-      })
-    ))).filter(Boolean);
-
-    if (items.length) return items.slice(0, limit);
+    return items;
   } catch (err) {
-    console.error('[news] CLS telegraph:', err.message);
+    console.error('[news] WSCN lives:', err.message);
+    return [];
   }
-
-  return [];
 }
 
 function normalizeLookupKey(value) {
@@ -1291,15 +1138,15 @@ app.get('/api/forex', async (_req, res) => {
 
 app.get('/api/news', async (_req, res) => {
   try {
-    const items = await fetchClsNews(3);
+    const items = await fetchWscnNews(3);
     if (items.length) {
       return res.json({ success: true, items });
     }
   } catch (err) {
-    console.error('[news] CLS:', err.message);
+    console.error('[news] WSCN:', err.message);
   }
 
-  res.status(503).json({ success: false, error: 'CLS news unavailable' });
+  res.status(503).json({ success: false, error: 'WallstreetCN news unavailable' });
 });
 
 // ─── GET /api/china-map (server-side fallback proxy) ─────────────────────
