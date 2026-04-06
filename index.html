@@ -587,7 +587,7 @@
 
     .interest-grid {
       display: grid;
-      grid-template-columns: minmax(280px, 360px) 1fr;
+      grid-template-columns: 1fr minmax(280px, 360px);
       gap: 16px;
       align-items: stretch;
     }
@@ -1501,8 +1501,24 @@
     <div class="s-desc">两首用 Logic Pro 做的小作品，以及走过省份的旅行轨迹。地图会高亮已到访的省级区域。</div>
 
     <div class="interest-grid">
+      <div class="interest-card travel-card">
+        <div class="travel-top">
+          <div>
+            <div class="interest-head">旅行地图</div>
+            <div class="interest-sub">已点亮省份：北京、广东、香港、海南、广西。</div>
+          </div>
+          <div class="visit-count" id="visit-count">已点亮 0 / 0</div>
+        </div>
+
+        <div class="map-wrap">
+          <div class="map-canvas" id="travel-map" role="img" aria-label="中国地图与到访省份"></div>
+        </div>
+
+        <div class="city-list" id="city-list"></div>
+      </div>
+
       <div class="interest-card music-card">
-        <div class="interest-head">Logic Pro 小样合集</div>
+        <div class="interest-head">音乐灵感</div>
         <div class="interest-sub">自己编排和混音的两段旋律，记录从 0 到 1 的音乐尝试。</div>
         <div class="music-note">原创 Demo · 持续更新中</div>
         <div class="music-cover" aria-hidden="true">🎧</div>
@@ -1519,22 +1535,6 @@
         <a class="music-link" href="https://163cn.tv/2XAkgzj" target="_blank" rel="noopener noreferrer">
           跳转网易云创作者页面: 流转行云
         </a>
-      </div>
-
-      <div class="interest-card">
-        <div class="travel-top">
-          <div>
-            <div class="interest-head">旅行地图</div>
-            <div class="interest-sub">已点亮省份：北京、广东、香港、海南、广西。</div>
-          </div>
-          <div class="visit-count" id="visit-count">已点亮 0 / 0</div>
-        </div>
-
-        <div class="map-wrap">
-          <div class="map-canvas" id="travel-map" role="img" aria-label="中国地图与到访省份"></div>
-        </div>
-
-        <div class="city-list" id="city-list"></div>
       </div>
     </div>
   </div>
