@@ -870,6 +870,366 @@
       background: rgba(255,255,255,.03);
     }
 
+    /* ── Section 4 · Notbot ─────────────────────────────────────── */
+    #notbot {
+      padding: 72px 0 90px;
+      border-top: 1px solid var(--border-2);
+    }
+
+    .notbot-grid {
+      display: grid;
+      grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .notbot-panel {
+      background:
+        radial-gradient(circle at 14% 10%, rgba(129,140,248,.16), transparent 40%),
+        var(--surface);
+      border: 1px solid var(--border-2);
+      border-radius: 18px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      height: 100%;
+      min-height: 530px;
+      box-shadow: 0 14px 28px rgba(0,0,0,.18);
+    }
+
+    .notbot-draw-btn {
+      border: 1px solid rgba(129,140,248,.42);
+      background: linear-gradient(135deg, rgba(79,70,229,.42), rgba(59,130,246,.38));
+      color: #e2e8f0;
+      border-radius: 12px;
+      padding: 11px 14px;
+      font-size: .9rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      letter-spacing: .2px;
+      transition: transform .2s, border-color .2s, background .2s, opacity .2s;
+      box-shadow: 0 12px 20px rgba(59,130,246,.14);
+    }
+
+    .notbot-draw-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      border-color: rgba(129,140,248,.62);
+      background: linear-gradient(135deg, rgba(79,70,229,.52), rgba(59,130,246,.46));
+    }
+
+    .notbot-draw-btn:disabled {
+      cursor: not-allowed;
+      opacity: .62;
+    }
+
+    .notbot-total {
+      font-size: .8rem;
+      color: var(--text-2);
+      border: 1px solid var(--border-2);
+      background: rgba(255,255,255,.03);
+      border-radius: 10px;
+      padding: 8px 10px;
+    }
+
+    .notbot-total strong {
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: .88rem;
+      margin-left: 4px;
+    }
+
+    .notbot-prob-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .notbot-prob-item {
+      border: 1px solid var(--border-2);
+      border-radius: 11px;
+      background:
+        radial-gradient(circle at 95% 10%, rgba(129,140,248,.15), transparent 34%),
+        rgba(255,255,255,.03);
+      padding: 11px 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: .76rem;
+      color: var(--text-2);
+      flex: 1;
+      min-height: 86px;
+    }
+
+    .notbot-prob-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .notbot-prob-name {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .notbot-prob-percent {
+      font-family: var(--mono);
+      font-size: .74rem;
+      color: var(--text-2);
+      white-space: nowrap;
+    }
+
+    .notbot-prob-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+
+    .notbot-prob-track {
+      width: 100%;
+      height: 7px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(148,163,184,.18);
+      border: 1px solid rgba(148,163,184,.2);
+    }
+
+    .notbot-prob-fill {
+      display: block;
+      height: 100%;
+      width: 0;
+      border-radius: inherit;
+      transition: width .25s ease;
+    }
+
+    .notbot-prob-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .notbot-prob-meta {
+      font-family: var(--mono);
+      color: var(--text-2);
+      font-size: .74rem;
+    }
+
+    .notbot-prob-weight {
+      font-size: .7rem;
+      color: var(--muted);
+      letter-spacing: .2px;
+      white-space: nowrap;
+    }
+
+    .notbot-prob-item.is-empty {
+      opacity: .58;
+    }
+
+    .notbot-status {
+      color: var(--muted);
+      font-size: .78rem;
+      line-height: 1.55;
+      border: 1px solid var(--border-2);
+      border-radius: 12px;
+      background: rgba(255,255,255,.02);
+      padding: 10px 12px;
+      min-height: 56px;
+    }
+
+    .notbot-stage-wrap {
+      background:
+        radial-gradient(circle at 18% 14%, rgba(34,197,94,.14), transparent 42%),
+        radial-gradient(circle at 84% 82%, rgba(59,130,246,.14), transparent 48%),
+        var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 530px;
+    }
+
+    .notbot-stage {
+      width: min(100%, 380px);
+      perspective: 1400px;
+      transform-style: preserve-3d;
+    }
+
+    .notbot-stage.is-spinning {
+      animation: notbotSpinScene 1.08s cubic-bezier(.2,.8,.2,1);
+    }
+
+    @keyframes notbotSpinScene {
+      0% {
+        transform: perspective(1400px) translateY(0) rotateZ(0deg) scale(1);
+      }
+      24% {
+        transform: perspective(1400px) translateY(-12px) rotateZ(-7deg) scale(1.02);
+      }
+      56% {
+        transform: perspective(1400px) translateY(-8px) rotateZ(6deg) scale(1.035);
+      }
+      82% {
+        transform: perspective(1400px) translateY(-2px) rotateZ(-2deg) scale(1.01);
+      }
+      100% {
+        transform: perspective(1400px) translateY(0) rotateZ(0deg) scale(1);
+      }
+    }
+
+    .notbot-card {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 3 / 4.2;
+      transform-style: preserve-3d;
+      transition: transform .75s cubic-bezier(.2,.8,.2,1), box-shadow .25s ease;
+      --notbot-rarity-color: #22c55e;
+    }
+
+    .notbot-card.revealed {
+      transform: rotateY(180deg);
+    }
+
+    .notbot-face {
+      position: absolute;
+      inset: 0;
+      border-radius: 20px;
+      backface-visibility: hidden;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: 0 16px 36px rgba(0,0,0,.28);
+    }
+
+    .notbot-face-back {
+      background:
+        radial-gradient(circle at 20% 18%, rgba(129,140,248,.42), transparent 50%),
+        radial-gradient(circle at 80% 78%, rgba(56,189,248,.3), transparent 50%),
+        linear-gradient(145deg, rgba(15,23,42,.94), rgba(2,6,23,.98));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 12px;
+      color: #e2e8f0;
+      padding: 20px;
+    }
+
+    .notbot-back-label {
+      font-size: 1.9rem;
+      font-weight: 800;
+      letter-spacing: 1.2px;
+      text-shadow: 0 8px 24px rgba(129,140,248,.28);
+    }
+
+    .notbot-back-sub {
+      font-size: .82rem;
+      color: #94a3b8;
+      line-height: 1.6;
+      max-width: 220px;
+    }
+
+    .notbot-face-front {
+      transform: rotateY(180deg);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02)),
+        linear-gradient(150deg, rgba(15,23,42,.98), rgba(2,6,23,.98));
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .notbot-face-front::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 20px;
+      border: 1px solid color-mix(in srgb, var(--notbot-rarity-color) 42%, transparent);
+      pointer-events: none;
+    }
+
+    .notbot-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .notbot-rarity {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--notbot-rarity-color);
+      color: var(--notbot-rarity-color);
+      background: rgba(255,255,255,.04);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .4px;
+      white-space: nowrap;
+    }
+
+    .notbot-id {
+      color: var(--text-2);
+      font-family: var(--mono);
+      font-size: .72rem;
+      white-space: nowrap;
+    }
+
+    .notbot-image-wrap {
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid var(--border-2);
+      aspect-ratio: 1 / 1;
+      background:
+        radial-gradient(circle at 22% 20%, color-mix(in srgb, var(--notbot-rarity-color) 35%, transparent), transparent 52%),
+        linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .notbot-image-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .notbot-image-fallback {
+      color: var(--text-2);
+      font-size: .82rem;
+      letter-spacing: .7px;
+      font-weight: 700;
+    }
+
+    .notbot-card-title {
+      margin-top: 12px;
+      font-size: .92rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .notbot-card-text {
+      margin-top: 8px;
+      color: var(--text-2);
+      font-size: .82rem;
+      line-height: 1.68;
+    }
+
     /* ── Footer ──────────────────────────────────────────────────── */
     footer {
       border-top: 1px solid var(--border-2);
@@ -884,12 +1244,17 @@
       .summary-grid      { grid-template-columns: repeat(2,1fr); }
       .news-grid         { grid-template-columns: 1fr; }
       .interest-grid     { grid-template-columns: 1fr; }
+      .notbot-grid       { grid-template-columns: 1fr; }
+      .notbot-panel      { min-height: 0; }
+      .notbot-stage-wrap { min-height: 480px; }
       .map-canvas        { height: 420px; }
       .s-title           { font-size: 1.7rem; }
       .dash-header       { flex-direction: column; align-items: flex-start; }
     }
     @media (max-width: 480px) {
       .summary-grid { grid-template-columns: 1fr; }
+      .notbot-panel { padding: 16px; }
+      .notbot-stage-wrap { padding: 16px; min-height: 430px; }
       .map-canvas { height: 340px; }
     }
   </style>
@@ -904,6 +1269,7 @@
       <a href="#about">个人介绍</a>
       <a href="#investment">投资看板</a>
       <a href="#interests">兴趣板块</a>
+      <a href="#notbot">Notbot 抽卡</a>
     </div>
   </div>
 </nav>
@@ -1150,6 +1516,47 @@
   </div>
 </section>
 
+<!-- ── Section 4 · Notbot ─────────────────────────────────────── -->
+<section id="notbot">
+  <div class="container">
+    <div class="s-label">Notbot</div>
+    <div class="s-title">稀有化<span>抽卡</span></div>
+    <div class="s-desc">每次随机抽 1 张，可重复，无保底。你可在 JSON 里继续扩展卡片内容与图片。</div>
+
+    <div class="notbot-grid">
+      <div class="notbot-panel">
+        <button class="notbot-draw-btn" id="notbot-draw-btn" type="button" disabled>抽一张</button>
+        <div class="notbot-total">累计抽卡: <strong id="notbot-total-count">0</strong></div>
+        <div class="notbot-prob-list" id="notbot-prob-list"></div>
+        <div class="notbot-status" id="notbot-status">卡池加载中…</div>
+      </div>
+
+      <div class="notbot-stage-wrap">
+        <div class="notbot-stage" id="notbot-stage">
+          <div class="notbot-card" id="notbot-card">
+            <div class="notbot-face notbot-face-back">
+              <div class="notbot-back-label">NOTBOT</div>
+              <div class="notbot-back-sub">点击左侧按钮开始抽卡，卡牌会旋转并翻面展示结果。</div>
+            </div>
+            <div class="notbot-face notbot-face-front">
+              <div class="notbot-card-top">
+                <span class="notbot-rarity" id="notbot-rarity">未抽取</span>
+                <span class="notbot-id" id="notbot-id">编号 --</span>
+              </div>
+              <div class="notbot-image-wrap">
+                <img id="notbot-image" src="" alt="notbot-card" style="display:none;" />
+                <div class="notbot-image-fallback" id="notbot-image-fallback">NO IMAGE</div>
+              </div>
+              <div class="notbot-card-title" id="notbot-title">等待抽卡</div>
+              <div class="notbot-card-text" id="notbot-text">点击左侧按钮后，会按稀有概率随机抽出一张卡。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <footer>
   © 2025 曾展鹏 · Shareyee · All rights reserved
 </footer>
@@ -1172,6 +1579,19 @@
   let pnlHistoryChart = null;
   let pnlHistoryItems = [];
   let pnlHistoryRange = 30;
+
+  const DEFAULT_NOTBOT_RARITY_CONFIG = Object.freeze({
+    '有趣': { color: '#22c55e', probability: 80 },
+    '特别': { color: '#3b82f6', probability: 16 },
+    '惊喜': { color: '#f59e0b', probability: 3.2 },
+    '人生': { color: '#ef4444', probability: 0.8 },
+  });
+  const NOTBOT_STORAGE_KEY = 'shareyee:notbot-total-draws';
+
+  let notbotRarityConfig = {};
+  let notbotCardsByRarity = new Map();
+  let notbotTotalDraws = 0;
+  let notbotDrawBusy = false;
 
   /* ── Helpers ───────────────────────────────────────────────────── */
   const f2 = n => {
@@ -1205,6 +1625,21 @@
     if (/^\/(?!\/)/.test(value)) return value;
     if (/^data:image\//i.test(value)) return value;
     return '';
+  };
+  const safeAssetUrl = url => {
+    const value = String(url ?? '').trim();
+    if (/^https?:\/\//i.test(value)) return value;
+    if (/^\/(?!\/)/.test(value)) return value;
+    if (/^data:image\//i.test(value)) return value;
+    if (/^(?:\.\/)?assets\/[a-zA-Z0-9/_\-.]+$/.test(value)) {
+      return `/${value.replace(/^\.?\//, '')}`;
+    }
+    return '';
+  };
+  const formatPercent = value => {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return '--';
+    return `${Number.isInteger(number) ? number.toFixed(0) : number.toFixed(1)}%`;
   };
   const escAttr = s => String(s ?? '')
     .replace(/&/g, '&amp;')
@@ -1723,7 +2158,295 @@
   }
 
   function escHtml(s) {
-    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function cloneDefaultNotbotRarityConfig() {
+    return Object.fromEntries(
+      Object.entries(DEFAULT_NOTBOT_RARITY_CONFIG).map(([rarity, meta]) => [
+        rarity,
+        { color: meta.color, probability: meta.probability },
+      ])
+    );
+  }
+
+  function normalizeNotbotRarityConfig(config) {
+    const normalized = cloneDefaultNotbotRarityConfig();
+    if (!config || typeof config !== 'object') return normalized;
+
+    for (const rarity of Object.keys(normalized)) {
+      const candidate = config?.[rarity];
+      const probability = Number(candidate?.probability);
+      const color = String(candidate?.color ?? '').trim();
+
+      if (Number.isFinite(probability) && probability > 0) {
+        normalized[rarity].probability = probability;
+      }
+      if (color) {
+        normalized[rarity].color = color;
+      }
+    }
+
+    return normalized;
+  }
+
+  function normalizeNotbotCards(cards, rarityConfig) {
+    if (!Array.isArray(cards)) return [];
+    const knownRarities = new Set(Object.keys(rarityConfig));
+
+    return cards.map((card, index) => {
+      const fallbackId = `NB-${String(index + 1).padStart(3, '0')}`;
+      const id = String(card?.id ?? fallbackId).trim() || fallbackId;
+      const title = String(card?.title ?? '未命名卡片').trim() || '未命名卡片';
+      const text = String(card?.text ?? '这是一张模板卡片，你可以在 JSON 中替换文案。').trim()
+        || '这是一张模板卡片，你可以在 JSON 中替换文案。';
+      const rarity = knownRarities.has(card?.rarity) ? card.rarity : '有趣';
+
+      return {
+        id,
+        title,
+        text,
+        rarity,
+        image: safeAssetUrl(card?.image),
+      };
+    });
+  }
+
+  function buildNotbotCardPool(cards, rarityConfig) {
+    const pool = new Map();
+    Object.keys(rarityConfig).forEach(rarity => pool.set(rarity, []));
+
+    cards.forEach(card => {
+      if (!pool.has(card.rarity)) pool.set(card.rarity, []);
+      pool.get(card.rarity).push(card);
+    });
+
+    return pool;
+  }
+
+  function readNotbotDrawCount() {
+    try {
+      const raw = Number(window.localStorage.getItem(NOTBOT_STORAGE_KEY) || 0);
+      return Number.isFinite(raw) && raw >= 0 ? raw : 0;
+    } catch (_err) {
+      return 0;
+    }
+  }
+
+  function saveNotbotDrawCount() {
+    try {
+      window.localStorage.setItem(NOTBOT_STORAGE_KEY, String(notbotTotalDraws));
+    } catch (_err) {
+      // Ignore localStorage failures (private mode / quota).
+    }
+  }
+
+  function renderNotbotDrawCount() {
+    const countEl = document.getElementById('notbot-total-count');
+    if (!countEl) return;
+    countEl.textContent = String(notbotTotalDraws);
+  }
+
+  function renderNotbotProbabilities() {
+    const listEl = document.getElementById('notbot-prob-list');
+    if (!listEl) return;
+
+    const entries = Object.entries(notbotRarityConfig);
+    const maxProbability = Math.max(1, ...entries.map(([, meta]) => Number(meta?.probability) || 0));
+    const rarityHintMap = {
+      '有趣': '日常彩蛋层',
+      '特别': '记忆碎片层',
+      '惊喜': '稀有瞬间层',
+      '人生': '里程碑层',
+    };
+
+    listEl.innerHTML = entries.map(([rarity, meta]) => {
+      const count = (notbotCardsByRarity.get(rarity) || []).length;
+      const emptyClass = count > 0 ? '' : 'is-empty';
+      const probabilityValue = Number(meta?.probability);
+      const normalizedWidth = maxProbability > 0 && Number.isFinite(probabilityValue)
+        ? (probabilityValue / maxProbability) * 100
+        : 0;
+      const barWidth = Math.max(8, Math.min(100, normalizedWidth));
+      const weightText = Number.isFinite(probabilityValue)
+        ? `${Number.isInteger(probabilityValue) ? probabilityValue.toFixed(0) : probabilityValue.toFixed(1)}`
+        : '--';
+      const rarityColor = escAttr(meta?.color || '#94a3b8');
+      const rarityHint = escHtml(rarityHintMap[rarity] || '卡池分层');
+
+      return `<div class="notbot-prob-item ${emptyClass}">
+        <div class="notbot-prob-head">
+          <div class="notbot-prob-name">
+            <span class="notbot-prob-dot" style="background:${rarityColor}"></span>
+            ${rarity}
+          </div>
+          <div class="notbot-prob-percent">${formatPercent(probabilityValue)}</div>
+        </div>
+        <div class="notbot-prob-track">
+          <span class="notbot-prob-fill" style="width:${barWidth.toFixed(1)}%;background:${rarityColor}"></span>
+        </div>
+        <div class="notbot-prob-foot">
+          <div class="notbot-prob-meta">${rarityHint} · ${count} 张</div>
+          <div class="notbot-prob-weight">权重 ${weightText}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function pickNotbotRarity() {
+    const entries = Object.entries(notbotRarityConfig).filter(([rarity, meta]) => {
+      const count = (notbotCardsByRarity.get(rarity) || []).length;
+      return count > 0 && Number.isFinite(Number(meta.probability)) && Number(meta.probability) > 0;
+    });
+
+    if (!entries.length) return null;
+
+    const totalWeight = entries.reduce((sum, [, meta]) => sum + Number(meta.probability), 0);
+    if (!(totalWeight > 0)) return null;
+
+    let roll = Math.random() * totalWeight;
+    for (const [rarity, meta] of entries) {
+      roll -= Number(meta.probability);
+      if (roll <= 0) return rarity;
+    }
+
+    return entries[entries.length - 1][0];
+  }
+
+  function pickNotbotCard(rarity) {
+    const pool = notbotCardsByRarity.get(rarity) || [];
+    if (!pool.length) return null;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  function applyNotbotCard(card) {
+    const cardEl = document.getElementById('notbot-card');
+    const rarityEl = document.getElementById('notbot-rarity');
+    const idEl = document.getElementById('notbot-id');
+    const titleEl = document.getElementById('notbot-title');
+    const textEl = document.getElementById('notbot-text');
+    const imageEl = document.getElementById('notbot-image');
+    const imageFallbackEl = document.getElementById('notbot-image-fallback');
+    if (!cardEl || !rarityEl || !idEl || !titleEl || !textEl || !imageEl || !imageFallbackEl) return;
+
+    const rarityMeta = notbotRarityConfig[card.rarity] || DEFAULT_NOTBOT_RARITY_CONFIG.有趣;
+    cardEl.style.setProperty('--notbot-rarity-color', rarityMeta.color);
+
+    rarityEl.textContent = card.rarity;
+    rarityEl.style.color = rarityMeta.color;
+    rarityEl.style.borderColor = rarityMeta.color;
+    idEl.textContent = `编号 ${card.id}`;
+    titleEl.textContent = card.title;
+    textEl.textContent = card.text;
+
+    imageEl.onload = () => {
+      imageEl.style.display = 'block';
+      imageFallbackEl.style.display = 'none';
+    };
+    imageEl.onerror = () => {
+      imageEl.style.display = 'none';
+      imageFallbackEl.style.display = 'flex';
+    };
+
+    if (card.image) {
+      imageEl.alt = `${card.title} 图片`;
+      imageEl.src = card.image;
+    } else {
+      imageEl.style.display = 'none';
+      imageFallbackEl.style.display = 'flex';
+      imageEl.removeAttribute('src');
+    }
+  }
+
+  function drawNotbotCard() {
+    if (notbotDrawBusy) return;
+
+    const drawBtn = document.getElementById('notbot-draw-btn');
+    const statusEl = document.getElementById('notbot-status');
+    const stageEl = document.getElementById('notbot-stage');
+    const cardEl = document.getElementById('notbot-card');
+    if (!drawBtn || !statusEl || !stageEl || !cardEl) return;
+
+    const rarity = pickNotbotRarity();
+    if (!rarity) {
+      statusEl.textContent = '卡池中没有可抽取的卡片，请先在 JSON 中补充卡片。';
+      return;
+    }
+
+    const pickedCard = pickNotbotCard(rarity);
+    if (!pickedCard) {
+      statusEl.textContent = '本次抽卡失败，请重试。';
+      return;
+    }
+
+    notbotDrawBusy = true;
+    drawBtn.disabled = true;
+    drawBtn.textContent = '抽取中…';
+    statusEl.textContent = '洗牌中，正在旋转卡片…';
+
+    stageEl.classList.remove('is-spinning');
+    cardEl.classList.remove('revealed');
+    void stageEl.offsetWidth;
+    stageEl.classList.add('is-spinning');
+
+    window.setTimeout(() => {
+      applyNotbotCard(pickedCard);
+      cardEl.classList.add('revealed');
+      statusEl.textContent = `抽到 ${pickedCard.rarity} · ${pickedCard.id}`;
+    }, 580);
+
+    window.setTimeout(() => {
+      stageEl.classList.remove('is-spinning');
+      notbotTotalDraws += 1;
+      saveNotbotDrawCount();
+      renderNotbotDrawCount();
+      drawBtn.disabled = false;
+      drawBtn.textContent = '再抽一张';
+      notbotDrawBusy = false;
+    }, 1160);
+  }
+
+  async function initNotbot() {
+    const drawBtn = document.getElementById('notbot-draw-btn');
+    const statusEl = document.getElementById('notbot-status');
+    if (!drawBtn || !statusEl) return;
+
+    notbotTotalDraws = readNotbotDrawCount();
+    renderNotbotDrawCount();
+
+    drawBtn.disabled = true;
+    drawBtn.textContent = '抽一张';
+    statusEl.textContent = '卡池加载中…';
+
+    try {
+      const response = await fetch('/data/notbot.cards.json', { cache: 'no-store' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const payload = await response.json();
+      notbotRarityConfig = normalizeNotbotRarityConfig(payload?.rarityConfig);
+
+      const cards = normalizeNotbotCards(payload?.cards, notbotRarityConfig);
+      notbotCardsByRarity = buildNotbotCardPool(cards, notbotRarityConfig);
+      renderNotbotProbabilities();
+
+      const hasDrawableCards = Array.from(notbotCardsByRarity.values()).some(pool => pool.length > 0);
+      if (!hasDrawableCards) {
+        throw new Error('notbot card pool is empty');
+      }
+
+      drawBtn.disabled = false;
+      statusEl.textContent = `卡池已就绪：共 ${cards.length} 张模板卡片`;
+    } catch (err) {
+      console.error('[notbot]', err);
+      notbotRarityConfig = cloneDefaultNotbotRarityConfig();
+      notbotCardsByRarity = buildNotbotCardPool([], notbotRarityConfig);
+      renderNotbotProbabilities();
+      statusEl.textContent = '卡池加载失败，请检查 data/notbot.cards.json 配置';
+      drawBtn.disabled = true;
+    }
+
+    drawBtn.removeEventListener('click', drawNotbotCard);
+    drawBtn.addEventListener('click', drawNotbotCard);
   }
 
   /* ── Interests map ────────────────────────────────────────────── */
@@ -2002,6 +2725,7 @@
     });
   })();
 
+  initNotbot();
   renderTravelMap();
 
   loadData();

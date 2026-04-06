@@ -5,3 +5,5 @@ data/portfolio.private.json
 !data/.gitkeep
 .github/agents/
 data/winOrNot/pnl-history.json
+/assets
+.DS_Store
