@@ -232,6 +232,11 @@
       flex-wrap: wrap; gap: 12px; margin-bottom: 28px;
     }
     .dash-header-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .dash-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
 
     /* Market badge */
     .mkt-badge {
@@ -481,12 +486,6 @@
     }
 
     /* Summary cards */
-    .summary-toolbar {
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      margin-bottom: 10px;
-    }
     .summary-currency-toggle {
       border: 1px solid rgba(129,140,248,.35);
       background: rgba(129,140,248,.12);
@@ -1263,7 +1262,6 @@
     @media (max-width: 820px) {
       .about-grid        { grid-template-columns: 1fr; }
       .profile-card      { position: static; }
-      .summary-toolbar   { justify-content: flex-start; }
       .summary-grid      { grid-template-columns: repeat(2,1fr); }
       .news-grid         { grid-template-columns: 1fr; }
       .interest-grid     { grid-template-columns: 1fr; }
@@ -1273,6 +1271,7 @@
       .map-canvas        { height: 420px; }
       .s-title           { font-size: 1.7rem; }
       .dash-header       { flex-direction: column; align-items: flex-start; }
+      .dash-header-actions { width: 100%; justify-content: flex-start; }
     }
     @media (max-width: 480px) {
       .summary-grid { grid-template-columns: 1fr; }
@@ -1377,9 +1376,12 @@
         <div class="wallet-meta" id="wallet-meta">只读钱包：加载中…</div>
         <div class="last-upd" id="last-upd">—</div>
       </div>
-      <button class="refresh-btn" id="refresh-btn" onclick="loadData()">
-        ↻ 刷新数据
-      </button>
+      <div class="dash-header-actions">
+        <button type="button" class="summary-currency-toggle" id="summary-currency-toggle" aria-label="当前显示 RMB，点击切换到 USD">切换到 USD</button>
+        <button class="refresh-btn" id="refresh-btn" onclick="loadData()">
+          ↻ 刷新数据
+        </button>
+      </div>
     </div>
 
     <!-- Dashboard grid (Table & Chart) -->
@@ -1412,9 +1414,6 @@
     </div>
 
     <!-- Summary cards -->
-    <div class="summary-toolbar">
-      <button type="button" class="summary-currency-toggle" id="summary-currency-toggle" aria-label="当前显示 RMB，点击切换到 USD">切换到 USD</button>
-    </div>
     <div class="summary-grid">
       <div class="sum-card">
         <div class="sc-label">投入池</div>
@@ -1461,15 +1460,14 @@
             <thead>
               <tr>
                 <th style="text-align:left">日期</th>
-                <th>浮动盈亏 (RMB)</th>
-                <th>浮动盈亏 (USD)</th>
+                <th id="pnl-history-pnl-head">浮动盈亏 (RMB)</th>
                 <th>盈亏比例</th>
-                <th>价值池 (RMB/USD)</th>
+                <th id="pnl-history-value-head">价值池 (RMB)</th>
                 <th>记录时间</th>
               </tr>
             </thead>
             <tbody id="pnl-history-tbody">
-              <tr><td colspan="6" class="history-empty">历史数据加载中…</td></tr>
+              <tr><td colspan="5" class="history-empty">历史数据加载中…</td></tr>
             </tbody>
           </table>
         </div>
@@ -1655,9 +1653,11 @@
     const amount = absolute ? Math.abs(number) : number;
     return currency === 'USD' ? `$${f2(amount)}` : `¥${f2(amount)}`;
   };
+  const getActiveCurrency = () => summaryCurrency === 'USD' ? 'USD' : 'RMB';
   const getSummaryPnlPct = () => {
-    const pnlValue = getDisplayAmountByCurrency(pnlRmb, pnlUsd, summaryCurrency);
-    const inputValue = getDisplayAmountByCurrency(inputPoolRmb, inputPoolUsd, summaryCurrency);
+    const displayCurrency = getActiveCurrency();
+    const pnlValue = getDisplayAmountByCurrency(pnlRmb, pnlUsd, displayCurrency);
+    const inputValue = getDisplayAmountByCurrency(inputPoolRmb, inputPoolUsd, displayCurrency);
     if (pnlValue !== null && inputValue !== null && inputValue > 0) {
       return (pnlValue / inputValue) * 100;
     }
@@ -1674,7 +1674,7 @@
     const toggleBtn = document.getElementById('summary-currency-toggle');
     if (!costEl || !mktValEl || !mktValHintEl || !pnlEl || !pnlNoteEl || !pnlPctEl || !rateHintEl) return;
 
-    const displayCurrency = summaryCurrency === 'USD' ? 'USD' : 'RMB';
+    const displayCurrency = getActiveCurrency();
     const inputPoolValue = getDisplayAmountByCurrency(inputPoolRmb, inputPoolUsd, displayCurrency);
     const valuePoolValue = getDisplayAmountByCurrency(valuePoolRmb, valuePoolUsd, displayCurrency);
     const pnlValue = getDisplayAmountByCurrency(pnlRmb, pnlUsd, displayCurrency);
@@ -1693,8 +1693,8 @@
     pnlPctEl.className = `sc-val ${clz(pnlPctValue)}`;
 
     rateHintEl.textContent = forexRate
-      ? `当前币种: ${displayCurrency} · 汇率: 1 USD = ¥${forexRate.toFixed(4)}`
-      : `当前币种: ${displayCurrency} · 汇率加载失败`;
+      ? `当前币种: ${displayCurrency}`
+      : `当前币种: ${displayCurrency}`;
 
     if (toggleBtn) {
       const nextCurrency = displayCurrency === 'RMB' ? 'USD' : 'RMB';
@@ -1703,8 +1703,10 @@
     }
   }
   function toggleSummaryCurrency() {
-    summaryCurrency = summaryCurrency === 'RMB' ? 'USD' : 'RMB';
+    summaryCurrency = getActiveCurrency() === 'RMB' ? 'USD' : 'RMB';
     renderSummaryCards();
+    renderPortfolio();
+    renderPnlHistory();
   }
   const moneyStack = (rmbValue, usdValue, compact = false) => {
     const rmbText = rmbValue === null ? '--' : `¥${f2(rmbValue)}`;
@@ -1828,16 +1830,22 @@
     const chartEl = document.getElementById('pnl-history-chart');
     const tbodyEl = document.getElementById('pnl-history-tbody');
     const metaEl = document.getElementById('pnl-history-meta');
+    const pnlHeadEl = document.getElementById('pnl-history-pnl-head');
+    const valueHeadEl = document.getElementById('pnl-history-value-head');
     if (!chartEl || !tbodyEl || !metaEl) return;
 
     const visibleRows = getVisiblePnlHistory();
+    const displayCurrency = getActiveCurrency();
     updatePnlHistoryRangeButtons();
+
+    if (pnlHeadEl) pnlHeadEl.textContent = `浮动盈亏 (${displayCurrency})`;
+    if (valueHeadEl) valueHeadEl.textContent = `价值池 (${displayCurrency})`;
 
     if (!visibleRows.length) {
       metaEl.textContent = pnlHistoryItems.length
         ? `已加载 ${pnlHistoryItems.length} 条历史记录，但当前范围内没有数据`
         : '暂无历史数据';
-      tbodyEl.innerHTML = '<tr><td colspan="6" class="history-empty">暂无可用历史数据</td></tr>';
+      tbodyEl.innerHTML = '<tr><td colspan="5" class="history-empty">暂无可用历史数据</td></tr>';
 
       if (pnlHistoryChart) {
         pnlHistoryChart.clear();
@@ -1851,22 +1859,22 @@
     metaEl.textContent = `云端已回填 ${pnlHistoryItems.length} 条记录 · 当前显示最近 ${visibleRows.length} 天 · ${firstRow.date} 至 ${lastRow.date}`;
 
     tbodyEl.innerHTML = visibleRows.map(row => {
-      const pnlRmbClass = clz(row.totalPnlRmb);
-      const pnlUsdClass = clz(row.totalPnl);
+      const pnlDisplay = getDisplayAmountByCurrency(row.totalPnlRmb, row.totalPnl, displayCurrency);
+      const valuePoolDisplay = getDisplayAmountByCurrency(row.valuePoolRmb, row.valuePoolUsd, displayCurrency);
+      const pnlClass = clz(pnlDisplay);
       const pnlPctClass = clz(row.totalPnlPct);
       return `<tr>
         <td style="text-align:left;font-weight:600">${row.date}</td>
-        <td class="mono ${pnlRmbClass}">${row.totalPnlRmb !== null ? cny(row.totalPnlRmb) : '--'}</td>
-        <td class="mono ${pnlUsdClass}">${row.totalPnl !== null ? usd(row.totalPnl) : '--'}</td>
+        <td class="mono ${pnlClass}">${formatAmountByCurrency(pnlDisplay, displayCurrency, true)}</td>
         <td class="${pnlPctClass}">${row.totalPnlPct !== null ? pct(row.totalPnlPct) : '--'}</td>
-        <td class="mono">${moneyStack(row.valuePoolRmb, row.valuePoolUsd, true)}</td>
+        <td class="mono">${formatAmountByCurrency(valuePoolDisplay, displayCurrency)}</td>
         <td class="mono">${formatHistoryTimestamp(row.recordedAt)}</td>
       </tr>`;
     }).join('');
 
     if (!pnlHistoryChart) return;
 
-    const seriesData = visibleRows.map(row => row.totalPnlRmb);
+    const seriesData = visibleRows.map(row => getDisplayAmountByCurrency(row.totalPnlRmb, row.totalPnl, displayCurrency));
     const numericSeries = seriesData.filter(Number.isFinite);
     const lowerBound = numericSeries.length ? Math.min(...numericSeries, 0) : 0;
     const upperBound = numericSeries.length ? Math.max(...numericSeries, 0) : 0;
@@ -1892,10 +1900,9 @@
           if (!row) return '';
           return [
             `<div style="font-weight:700;margin-bottom:4px">${row.date}</div>`,
-            `浮动盈亏(RMB): ${row.totalPnlRmb !== null ? cny(row.totalPnlRmb) : '--'}`,
-            `浮动盈亏(USD): ${row.totalPnl !== null ? usd(row.totalPnl) : '--'}`,
+            `浮动盈亏(${displayCurrency}): ${formatAmountByCurrency(getDisplayAmountByCurrency(row.totalPnlRmb, row.totalPnl, displayCurrency), displayCurrency, true)}`,
             `盈亏比例: ${row.totalPnlPct !== null ? pct(row.totalPnlPct) : '--'}`,
-            `价值池: ${moneyPair(row.valuePoolRmb, row.valuePoolUsd)}`,
+            `价值池(${displayCurrency}): ${formatAmountByCurrency(getDisplayAmountByCurrency(row.valuePoolRmb, row.valuePoolUsd, displayCurrency), displayCurrency)}`,
           ].join('<br/>');
         },
       },
@@ -1912,14 +1919,14 @@
         scale: true,
         axisLabel: {
           color: '#94a3b8',
-          formatter: value => `¥${f2(value)}`,
+          formatter: value => formatAmountByCurrency(value, displayCurrency),
         },
         splitLine: { lineStyle: { color: 'rgba(255,255,255,.06)' } },
         min: yAxisMin,
         max: yAxisMax,
       },
       series: [{
-        name: '浮动盈亏 (RMB)',
+        name: `浮动盈亏 (${displayCurrency})`,
         type: 'line',
         smooth: true,
         data: seriesData,
@@ -1986,6 +1993,7 @@
 
   /* ── Skeleton rows ─────────────────────────────────────────────── */
   function renderLoading() {
+    const displayCurrency = getActiveCurrency();
     const rows = portfolioItems.length > 0 ? portfolioItems : [
       { label: 'ASSET', ticker: 'TICKER', balance: 0, cost: 0, avg: null, price: null, marketValue: null, pnl: null, pnlPct: null },
       { label: 'ASSET', ticker: 'TICKER', balance: 0, cost: 0, avg: null, price: null, marketValue: null, pnl: null, pnlPct: null },
@@ -1993,8 +2001,10 @@
     ];
 
     document.getElementById('tbody').innerHTML = rows.map(p => {
-      const avg = Number.isFinite(p.avg) ? `$${f2(p.avg)}` : '--';
-      const cost = Number.isFinite(p.cost) && p.cost > 0 ? `$${f2(p.cost)}` : '--';
+      const avgValue = Number.isFinite(p.avg) ? getDisplayAmountByCurrency(null, p.avg, displayCurrency) : null;
+      const costValue = Number.isFinite(p.cost) && p.cost > 0 ? getDisplayAmountByCurrency(null, p.cost, displayCurrency) : null;
+      const avg = avgValue !== null ? formatAmountByCurrency(avgValue, displayCurrency) : '--';
+      const cost = costValue !== null ? formatAmountByCurrency(costValue, displayCurrency) : '--';
       return `<tr>
         <td>
           <div class="asset-cell">
@@ -2026,7 +2036,7 @@
 
     const historyTableEl = document.getElementById('pnl-history-tbody');
     if (historyTableEl) {
-      historyTableEl.innerHTML = '<tr><td colspan="6" class="history-empty">历史数据加载中…</td></tr>';
+      historyTableEl.innerHTML = '<tr><td colspan="5" class="history-empty">历史数据加载中…</td></tr>';
     }
 
     const historyMetaEl = document.getElementById('pnl-history-meta');
@@ -2035,6 +2045,7 @@
 
   /* ── Render portfolio with live prices ─────────────────────────── */
   function renderPortfolio() {
+    const displayCurrency = getActiveCurrency();
     const chartData = [];
     
     const rows = portfolioItems.map(p => {
@@ -2049,10 +2060,16 @@
         chartData.push({ name: p.ticker, value: mval });
       }
 
-      const priceCell = price !== null ? `<span class="mono">$${f2(price)}</span>` : '<span class="skel"></span>';
-  const costCell  = cost  !== null ? `<span class="mono">$${f2(cost)}</span>`  : '<span class="skel"></span>';
-      const mvalCell  = mval  !== null ? `<span class="mono">$${f2(mval)}</span>`  : '<span class="skel"></span>';
-      const plCell    = pl    !== null ? `<span class="mono ${clz(pl)}">${usd(pl)}</span>`  : '<span class="skel"></span>';
+      const avgDisplay = avg !== null ? getDisplayAmountByCurrency(null, avg, displayCurrency) : null;
+      const priceDisplay = price !== null ? getDisplayAmountByCurrency(null, price, displayCurrency) : null;
+      const costDisplay = cost !== null ? getDisplayAmountByCurrency(null, cost, displayCurrency) : null;
+      const mvalDisplay = mval !== null ? getDisplayAmountByCurrency(null, mval, displayCurrency) : null;
+      const plDisplay = pl !== null ? getDisplayAmountByCurrency(null, pl, displayCurrency) : null;
+
+      const priceCell = priceDisplay !== null ? `<span class="mono">${formatAmountByCurrency(priceDisplay, displayCurrency)}</span>` : '<span class="skel"></span>';
+      const costCell  = costDisplay  !== null ? `<span class="mono">${formatAmountByCurrency(costDisplay, displayCurrency)}</span>`  : '<span class="skel"></span>';
+      const mvalCell  = mvalDisplay  !== null ? `<span class="mono">${formatAmountByCurrency(mvalDisplay, displayCurrency)}</span>`  : '<span class="skel"></span>';
+      const plCell    = plDisplay    !== null ? `<span class="mono ${clz(plDisplay)}">${formatAmountByCurrency(plDisplay, displayCurrency, true)}</span>`  : '<span class="skel"></span>';
       const plpCell   = plp   !== null ? `<span class="${clz(plp)}">${pct(plp)}</span>`     : '<span class="skel"></span>';
       const logoUrl   = safeUrl(p.logo);
       const fallback  = escAttr((p.ticker || p.label || '?').slice(0, 1));
@@ -2072,7 +2089,7 @@
         </td>
         <td class="mono">${balanceText}</td>
         <td>${costCell}</td>
-        <td class="mono">${avg !== null ? `$${f2(avg)}` : '--'}</td>
+        <td class="mono">${avgDisplay !== null ? formatAmountByCurrency(avgDisplay, displayCurrency) : '--'}</td>
         <td>${priceCell}</td>
         <td>${mvalCell}</td>
         <td>${plCell}</td>
@@ -2082,12 +2099,13 @@
     document.getElementById('tbody').innerHTML = rows.join('');
 
     // Footer totals row
-    const totalPL = pnlUsd;
-    const totalPLp = pnlPct;
+    const totalPL = getDisplayAmountByCurrency(pnlRmb, pnlUsd, displayCurrency);
+    const totalPLp = getSummaryPnlPct();
+    const totalMktVal = getDisplayAmountByCurrency(valuePoolRmb, valuePoolUsd, displayCurrency);
     document.getElementById('tfoot').innerHTML = `<tr>
       <td colspan="5" style="text-align:left;color:var(--muted)">合计</td>
-      <td class="mono">${moneyStack(valuePoolRmb, valuePoolUsd, true)}</td>
-      <td class="mono ${clz(totalPL)}">${usd(totalPL)}</td>
+      <td class="mono">${formatAmountByCurrency(totalMktVal, displayCurrency)}</td>
+      <td class="mono ${clz(totalPL)}">${formatAmountByCurrency(totalPL, displayCurrency, true)}</td>
       <td class="${clz(totalPLp)}">${pct(totalPLp)}</td>
     </tr>`;
 
@@ -2109,11 +2127,14 @@
       allocationChart.setOption({
         tooltip: {
           trigger: 'item',
-          formatter: '{b}: ${c} ({d}%)',
+          formatter: params => {
+            const value = getDisplayAmountByCurrency(null, params.value, displayCurrency);
+            const ratio = Number.isFinite(Number(params.percent)) ? Number(params.percent).toFixed(2) : '--';
+            return `${params.name}: ${formatAmountByCurrency(value, displayCurrency)} (${ratio}%)`;
+          },
           backgroundColor: 'rgba(8,8,18,0.9)',
           borderColor: 'rgba(255,255,255,0.1)',
           textStyle: { color: '#f1f5f9' },
-          valueFormatter: value => `$${f2(value)}`
         },
         legend: {
           bottom: '0%',
