@@ -481,6 +481,28 @@
     }
 
     /* Summary cards */
+    .summary-toolbar {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .summary-currency-toggle {
+      border: 1px solid rgba(129,140,248,.35);
+      background: rgba(129,140,248,.12);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 7px 12px;
+      font-size: .74rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .18s, border-color .18s;
+      font-family: inherit;
+    }
+    .summary-currency-toggle:hover {
+      background: rgba(129,140,248,.2);
+      border-color: rgba(129,140,248,.5);
+    }
     .summary-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -1241,6 +1263,7 @@
     @media (max-width: 820px) {
       .about-grid        { grid-template-columns: 1fr; }
       .profile-card      { position: static; }
+      .summary-toolbar   { justify-content: flex-start; }
       .summary-grid      { grid-template-columns: repeat(2,1fr); }
       .news-grid         { grid-template-columns: 1fr; }
       .interest-grid     { grid-template-columns: 1fr; }
@@ -1389,6 +1412,9 @@
     </div>
 
     <!-- Summary cards -->
+    <div class="summary-toolbar">
+      <button type="button" class="summary-currency-toggle" id="summary-currency-toggle" aria-label="当前显示 RMB，点击切换到 USD">切换到 USD</button>
+    </div>
     <div class="summary-grid">
       <div class="sum-card">
         <div class="sc-label">投入池</div>
@@ -1572,6 +1598,7 @@
   let pnlUsd = null;
   let pnlRmb = null;
   let pnlPct = null;
+  let summaryCurrency = 'RMB';
 
   let forexRate = null;
   let walletMeta = null;
@@ -1599,7 +1626,6 @@
     return Number.isFinite(number) ? number.toFixed(2) : '--';
   };
   const clz = n => n > 0 ? 'pos' : n < 0 ? 'neg' : '';
-  const absOrNull = n => n === null ? null : Math.abs(Number(n));
   const usd  = n => n === null ? '--' : `$${Math.abs(n).toFixed(2)}`;
   const pct  = n => n === null ? '--' : `${Math.abs(n).toFixed(2)}%`;
   const cny  = n => n === null ? '--' : `¥${Math.abs(n).toFixed(2)}`;
@@ -1608,6 +1634,78 @@
     const number = Number(value);
     return Number.isFinite(number) ? number : null;
   };
+  const getDisplayAmountByCurrency = (rmbValue, usdValue, currency) => {
+    const rmb = maybeNumber(rmbValue);
+    const usd = maybeNumber(usdValue);
+    const rate = maybeNumber(forexRate);
+
+    if (currency === 'USD') {
+      if (usd !== null) return usd;
+      if (rmb !== null && rate !== null && rate > 0) return rmb / rate;
+      return null;
+    }
+
+    if (rmb !== null) return rmb;
+    if (usd !== null && rate !== null && rate > 0) return usd * rate;
+    return null;
+  };
+  const formatAmountByCurrency = (value, currency, absolute = false) => {
+    const number = maybeNumber(value);
+    if (number === null) return '--';
+    const amount = absolute ? Math.abs(number) : number;
+    return currency === 'USD' ? `$${f2(amount)}` : `¥${f2(amount)}`;
+  };
+  const getSummaryPnlPct = () => {
+    const pnlValue = getDisplayAmountByCurrency(pnlRmb, pnlUsd, summaryCurrency);
+    const inputValue = getDisplayAmountByCurrency(inputPoolRmb, inputPoolUsd, summaryCurrency);
+    if (pnlValue !== null && inputValue !== null && inputValue > 0) {
+      return (pnlValue / inputValue) * 100;
+    }
+    return maybeNumber(pnlPct);
+  };
+  function renderSummaryCards() {
+    const costEl = document.getElementById('sc-cost');
+    const mktValEl = document.getElementById('sc-mktval');
+    const mktValHintEl = document.getElementById('sc-mktval-cny');
+    const pnlEl = document.getElementById('sc-pnl');
+    const pnlNoteEl = document.getElementById('sc-pnl-note');
+    const pnlPctEl = document.getElementById('sc-pnl-pct');
+    const rateHintEl = document.getElementById('sc-rate-hint');
+    const toggleBtn = document.getElementById('summary-currency-toggle');
+    if (!costEl || !mktValEl || !mktValHintEl || !pnlEl || !pnlNoteEl || !pnlPctEl || !rateHintEl) return;
+
+    const displayCurrency = summaryCurrency === 'USD' ? 'USD' : 'RMB';
+    const inputPoolValue = getDisplayAmountByCurrency(inputPoolRmb, inputPoolUsd, displayCurrency);
+    const valuePoolValue = getDisplayAmountByCurrency(valuePoolRmb, valuePoolUsd, displayCurrency);
+    const pnlValue = getDisplayAmountByCurrency(pnlRmb, pnlUsd, displayCurrency);
+    const pnlPctValue = getSummaryPnlPct();
+
+    costEl.textContent = formatAmountByCurrency(inputPoolValue, displayCurrency);
+    mktValEl.textContent = formatAmountByCurrency(valuePoolValue, displayCurrency);
+    mktValHintEl.textContent = `当前显示 ${displayCurrency}`;
+
+    pnlEl.textContent = formatAmountByCurrency(pnlValue, displayCurrency, true);
+    pnlEl.className = `sc-val ${clz(pnlValue)}`;
+
+    pnlNoteEl.textContent = `当前显示 ${displayCurrency}`;
+
+    pnlPctEl.textContent = pct(pnlPctValue);
+    pnlPctEl.className = `sc-val ${clz(pnlPctValue)}`;
+
+    rateHintEl.textContent = forexRate
+      ? `当前币种: ${displayCurrency} · 汇率: 1 USD = ¥${forexRate.toFixed(4)}`
+      : `当前币种: ${displayCurrency} · 汇率加载失败`;
+
+    if (toggleBtn) {
+      const nextCurrency = displayCurrency === 'RMB' ? 'USD' : 'RMB';
+      toggleBtn.textContent = `切换到 ${nextCurrency}`;
+      toggleBtn.setAttribute('aria-label', `当前显示 ${displayCurrency}，点击切换到 ${nextCurrency}`);
+    }
+  }
+  function toggleSummaryCurrency() {
+    summaryCurrency = summaryCurrency === 'RMB' ? 'USD' : 'RMB';
+    renderSummaryCards();
+  }
   const moneyStack = (rmbValue, usdValue, compact = false) => {
     const rmbText = rmbValue === null ? '--' : `¥${f2(rmbValue)}`;
     const usdText = usdValue === null ? '--' : `≈ $${f2(usdValue)}`;
@@ -1994,23 +2092,7 @@
     </tr>`;
 
     /* Summary cards */
-    document.getElementById('sc-cost').innerHTML = moneyStack(inputPoolRmb, inputPoolUsd);
-    document.getElementById('sc-mktval').innerHTML = moneyStack(valuePoolRmb, valuePoolUsd);
-    document.getElementById('sc-mktval-cny').textContent = '按实时汇率折算';
-
-    const pnlEl = document.getElementById('sc-pnl');
-    pnlEl.innerHTML = moneyStack(absOrNull(pnlRmb), absOrNull(totalPL));
-    pnlEl.className = `sc-val ${clz(pnlRmb)}`;
-
-    const pnlNoteEl = document.getElementById('sc-pnl-note');
-    pnlNoteEl.textContent = '按实时汇率折算';
-
-    const pnlPctEl = document.getElementById('sc-pnl-pct');
-    pnlPctEl.textContent = pct(totalPLp);
-    pnlPctEl.className = `sc-val ${clz(totalPLp)}`;
-
-    const rateHintEl = document.getElementById('sc-rate-hint');
-    rateHintEl.textContent = forexRate ? `汇率: 1 USD = ¥${forexRate.toFixed(4)}` : '汇率加载失败';
+    renderSummaryCards();
 
     const walletMetaEl = document.getElementById('wallet-meta');
     if (walletMetaEl) {
@@ -2112,15 +2194,7 @@
     }
     walletMeta = d.wallet || null;
 
-    document.getElementById('sc-cost').innerHTML = moneyStack(inputPoolRmb, inputPoolUsd);
-    document.getElementById('sc-mktval').innerHTML = moneyStack(valuePoolRmb, valuePoolUsd);
-    document.getElementById('sc-mktval-cny').textContent = '按实时汇率折算';
-    document.getElementById('sc-pnl').innerHTML = moneyStack(absOrNull(pnlRmb), absOrNull(pnlUsd));
-    document.getElementById('sc-pnl').className = `sc-val ${clz(pnlRmb)}`;
-    document.getElementById('sc-pnl-note').textContent = '按实时汇率折算';
-    document.getElementById('sc-pnl-pct').textContent = pct(pnlPct);
-    document.getElementById('sc-pnl-pct').className = `sc-val ${clz(pnlPct)}`;
-    document.getElementById('sc-rate-hint').textContent = forexRate ? `汇率: 1 USD = ¥${forexRate.toFixed(4)}` : '汇率加载失败';
+    renderSummaryCards();
     document.getElementById('fr-rate').textContent = forexRate ? `1 USD ≈ ${forexRate.toFixed(4)} CNY` : '加载失败';
     const walletMetaEl = document.getElementById('wallet-meta');
     if (walletMetaEl) {
@@ -2319,7 +2393,83 @@
     return pool[Math.floor(Math.random() * pool.length)];
   }
 
-  function applyNotbotCard(card) {
+  function delay(ms) {
+    return new Promise(resolve => window.setTimeout(resolve, ms));
+  }
+
+  function parseCssTimeToMs(value) {
+    const raw = String(value ?? '').trim();
+    if (!raw) return 0;
+    if (raw.endsWith('ms')) return Number.parseFloat(raw) || 0;
+    if (raw.endsWith('s')) return (Number.parseFloat(raw) || 0) * 1000;
+    return 0;
+  }
+
+  function getTransformTransitionMs(element) {
+    if (!element) return 0;
+
+    const styles = window.getComputedStyle(element);
+    const durations = String(styles.transitionDuration || '0s').split(',').map(parseCssTimeToMs);
+    const delays = String(styles.transitionDelay || '0s').split(',').map(parseCssTimeToMs);
+    const properties = String(styles.transitionProperty || 'all').split(',').map(item => item.trim());
+    const count = Math.max(durations.length, delays.length, properties.length);
+
+    let maxMs = 0;
+    for (let i = 0; i < count; i += 1) {
+      const property = properties[i] || properties[properties.length - 1] || 'all';
+      if (property !== 'transform' && property !== 'all') continue;
+
+      const duration = durations[i] ?? durations[durations.length - 1] ?? 0;
+      const delayMs = delays[i] ?? delays[delays.length - 1] ?? 0;
+      maxMs = Math.max(maxMs, duration + delayMs);
+    }
+
+    return maxMs;
+  }
+
+  async function ensureNotbotBackFace(cardEl) {
+    if (!cardEl) return;
+    if (!cardEl.classList.contains('revealed')) return;
+
+    const transitionMs = getTransformTransitionMs(cardEl);
+    const waitMs = Math.max(320, transitionMs + 28);
+    cardEl.classList.remove('revealed');
+    await delay(waitMs);
+  }
+
+  function loadImageWithTimeout(imageEl, src, timeoutMs = 3800) {
+    return new Promise(resolve => {
+      if (!imageEl || !src) {
+        resolve(false);
+        return;
+      }
+
+      const currentSrc = imageEl.getAttribute('src') || '';
+      if (currentSrc === src && imageEl.complete) {
+        resolve(imageEl.naturalWidth > 0);
+        return;
+      }
+
+      let settled = false;
+      let timeoutId = null;
+
+      const done = loaded => {
+        if (settled) return;
+        settled = true;
+        if (timeoutId) window.clearTimeout(timeoutId);
+        imageEl.onload = null;
+        imageEl.onerror = null;
+        resolve(loaded);
+      };
+
+      imageEl.onload = () => done(true);
+      imageEl.onerror = () => done(false);
+      timeoutId = window.setTimeout(() => done(false), timeoutMs);
+      imageEl.src = src;
+    });
+  }
+
+  async function applyNotbotCard(card) {
     const cardEl = document.getElementById('notbot-card');
     const rarityEl = document.getElementById('notbot-rarity');
     const idEl = document.getElementById('notbot-id');
@@ -2327,7 +2477,7 @@
     const textEl = document.getElementById('notbot-text');
     const imageEl = document.getElementById('notbot-image');
     const imageFallbackEl = document.getElementById('notbot-image-fallback');
-    if (!cardEl || !rarityEl || !idEl || !titleEl || !textEl || !imageEl || !imageFallbackEl) return;
+    if (!cardEl || !rarityEl || !idEl || !titleEl || !textEl || !imageEl || !imageFallbackEl) return false;
 
     const rarityMeta = notbotRarityConfig[card.rarity] || DEFAULT_NOTBOT_RARITY_CONFIG.有趣;
     cardEl.style.setProperty('--notbot-rarity-color', rarityMeta.color);
@@ -2339,26 +2489,30 @@
     titleEl.textContent = card.title;
     textEl.textContent = card.text;
 
-    imageEl.onload = () => {
-      imageEl.style.display = 'block';
-      imageFallbackEl.style.display = 'none';
-    };
-    imageEl.onerror = () => {
-      imageEl.style.display = 'none';
-      imageFallbackEl.style.display = 'flex';
-    };
-
     if (card.image) {
       imageEl.alt = `${card.title} 图片`;
-      imageEl.src = card.image;
+      imageEl.style.display = 'none';
+      imageFallbackEl.style.display = 'flex';
+
+      const loaded = await loadImageWithTimeout(imageEl, card.image);
+      if (loaded) {
+        imageEl.style.display = 'block';
+        imageFallbackEl.style.display = 'none';
+      } else {
+        imageEl.style.display = 'none';
+        imageFallbackEl.style.display = 'flex';
+      }
+
+      return loaded;
     } else {
       imageEl.style.display = 'none';
       imageFallbackEl.style.display = 'flex';
       imageEl.removeAttribute('src');
+      return false;
     }
   }
 
-  function drawNotbotCard() {
+  async function drawNotbotCard() {
     if (notbotDrawBusy) return;
 
     const drawBtn = document.getElementById('notbot-draw-btn');
@@ -2382,28 +2536,50 @@
     notbotDrawBusy = true;
     drawBtn.disabled = true;
     drawBtn.textContent = '抽取中…';
-    statusEl.textContent = '洗牌中，正在旋转卡片…';
+    statusEl.textContent = '卡牌回背中…';
+
+    const minRevealDelayMs = 560;
+    const minDrawDurationMs = 1160;
 
     stageEl.classList.remove('is-spinning');
-    cardEl.classList.remove('revealed');
-    void stageEl.offsetWidth;
-    stageEl.classList.add('is-spinning');
 
-    window.setTimeout(() => {
-      applyNotbotCard(pickedCard);
+    try {
+      await ensureNotbotBackFace(cardEl);
+
+      statusEl.textContent = '洗牌中，正在旋转卡片…';
+      void stageEl.offsetWidth;
+      stageEl.classList.add('is-spinning');
+
+      const startedAt = performance.now();
+      statusEl.textContent = '卡片解析中，等待图片加载完成…';
+      const [imageLoaded] = await Promise.all([
+        applyNotbotCard(pickedCard),
+        delay(minRevealDelayMs),
+      ]);
+
       cardEl.classList.add('revealed');
-      statusEl.textContent = `抽到 ${pickedCard.rarity} · ${pickedCard.id}`;
-    }, 580);
-
-    window.setTimeout(() => {
       stageEl.classList.remove('is-spinning');
+      statusEl.textContent = imageLoaded
+        ? `抽到 ${pickedCard.rarity} · ${pickedCard.id}`
+        : `抽到 ${pickedCard.rarity} · ${pickedCard.id}（图片未就绪，先显示占位）`;
+
+      const elapsed = performance.now() - startedAt;
+      if (elapsed < minDrawDurationMs) {
+        await delay(minDrawDurationMs - elapsed);
+      }
+
       notbotTotalDraws += 1;
       saveNotbotDrawCount();
       renderNotbotDrawCount();
+    } catch (err) {
+      console.error('[notbot-draw]', err);
+      stageEl.classList.remove('is-spinning');
+      statusEl.textContent = '抽卡异常，请重试。';
+    } finally {
       drawBtn.disabled = false;
       drawBtn.textContent = '再抽一张';
       notbotDrawBusy = false;
-    }, 1160);
+    }
   }
 
   async function initNotbot() {
@@ -2649,6 +2825,11 @@
         if (!button) return;
         setPnlHistoryRange(button.dataset.range);
       });
+    }
+
+    const summaryCurrencyToggleEl = document.getElementById('summary-currency-toggle');
+    if (summaryCurrencyToggleEl) {
+      summaryCurrencyToggleEl.addEventListener('click', toggleSummaryCurrency);
     }
   })();
 
