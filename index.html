@@ -321,7 +321,14 @@
       border-radius: 16px; padding: 20px;
       display: flex; flex-direction: column;
     }
-    .chart-title { font-size: .85rem; font-weight: 600; margin-bottom: 10px; color: var(--text); }
+    .chart-title {
+      font-size: .85rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--text);
+      width: 100%;
+      text-align: center;
+    }
 
     .history-panel {
       background: var(--surface);
@@ -1953,6 +1960,8 @@
         },
       }],
     }, { notMerge: true });
+
+    scheduleChartResize();
   }
 
   function setPnlHistoryRange(nextRange) {
@@ -2174,6 +2183,8 @@
         ]
       });
     }
+
+    scheduleChartResize();
   }
 
   /* ── API calls ─────────────────────────────────────────────────── */
@@ -2774,13 +2785,25 @@
       },
       series: [],
     });
+
+    scheduleChartResize();
   }
 
-  window.addEventListener('resize', () => {
+  function resizeAllCharts() {
     if (travelMapChart) travelMapChart.resize();
     if (allocationChart) allocationChart.resize();
     if (pnlHistoryChart) pnlHistoryChart.resize();
-  });
+  }
+
+  function scheduleChartResize() {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        resizeAllCharts();
+      });
+    });
+  }
+
+  window.addEventListener('resize', resizeAllCharts);
 
   /* ── Update market badge ───────────────────────────────────────── */
   function updateMarket() {
@@ -2853,6 +2876,8 @@
       summaryCurrencyToggleEl.addEventListener('click', toggleSummaryCurrency);
     }
   })();
+
+  window.addEventListener('load', scheduleChartResize);
 
   (function initAvatar() {
     const avatar = document.getElementById('profile-avatar');
@@ -2931,6 +2956,7 @@
   renderTravelMap();
 
   loadData();
+  scheduleChartResize();
   // Auto-refresh every 15 minutes
   setInterval(loadData, 15 * 60 * 1000);
 </script>
