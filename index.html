@@ -2501,6 +2501,31 @@
     });
   }
 
+  function buildImageRetrySrc(src, attemptIndex) {
+    if (attemptIndex <= 1) return src;
+
+    const separator = src.includes('?') ? '&' : '?';
+    return `${src}${separator}nb_retry=${attemptIndex}&nb_ts=${Date.now()}`;
+  }
+
+  async function loadImageWithRetry(imageEl, src, options = {}) {
+    const maxAttempts = Math.max(1, Number(options.maxAttempts) || 3);
+    const timeoutMs = Math.max(300, Number(options.timeoutMs) || 3800);
+    const retryDelayMs = Math.max(0, Number(options.retryDelayMs) || 180);
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      const attemptSrc = buildImageRetrySrc(src, attempt);
+      const loaded = await loadImageWithTimeout(imageEl, attemptSrc, timeoutMs);
+      if (loaded) return true;
+
+      if (attempt < maxAttempts && retryDelayMs > 0) {
+        await delay(retryDelayMs);
+      }
+    }
+
+    return false;
+  }
+
   async function applyNotbotCard(card) {
     const cardEl = document.getElementById('notbot-card');
     const rarityEl = document.getElementById('notbot-rarity');
@@ -2526,7 +2551,11 @@
       imageEl.style.display = 'none';
       imageFallbackEl.style.display = 'flex';
 
-      const loaded = await loadImageWithTimeout(imageEl, card.image);
+      const loaded = await loadImageWithRetry(imageEl, card.image, {
+        maxAttempts: 3,
+        timeoutMs: 3800,
+        retryDelayMs: 180,
+      });
       if (loaded) {
         imageEl.style.display = 'block';
         imageFallbackEl.style.display = 'none';
