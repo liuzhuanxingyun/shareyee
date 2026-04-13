@@ -265,6 +265,18 @@
       border: 1px solid var(--border-2);
       background: rgba(255,255,255,.03);
     }
+    .tfoot-special-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: .68rem;
+      color: #67e8f9;
+      border: 1px solid rgba(34,211,238,.35);
+      background: rgba(34,211,238,.1);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-weight: 700;
+    }
 
     .asset-cell {
       display: flex;
@@ -1757,6 +1769,53 @@
     const value = String(address ?? '').trim();
     return value.length > 10 ? `${value.slice(0, 6)}…${value.slice(-4)}` : value;
   };
+  const normalizeAssetKey = value => String(value ?? '')
+    .trim()
+    .toUpperCase()
+    .replace(/[\s_-]+/g, '')
+    .replace(/[^A-Z0-9.]/g, '');
+  const isUsdtSpecialItem = item => {
+    if (!item || typeof item !== 'object') return false;
+    const candidates = [item.ticker, item.label, item.tokenSymbol, item.tokenName];
+    return candidates.some(value => {
+      const key = normalizeAssetKey(value);
+      return key.includes('USDT') || key.includes('TETHERUSD');
+    });
+  };
+  const splitPortfolioItems = items => {
+    const regularItems = [];
+    const usdtItems = [];
+    const list = Array.isArray(items) ? items : [];
+
+    list.forEach(item => {
+      if (isUsdtSpecialItem(item)) {
+        usdtItems.push(item);
+      } else {
+        regularItems.push(item);
+      }
+    });
+
+    return { regularItems, usdtItems };
+  };
+  function getStableAssetSummary(usdtItems, displayCurrency) {
+    if (!Array.isArray(usdtItems) || !usdtItems.length) return null;
+
+    const totalBalance = usdtItems.reduce((sum, item) => {
+      const amount = Number(item?.balance);
+      return Number.isFinite(amount) ? sum + amount : sum;
+    }, 0);
+    const totalValueUsd = usdtItems.reduce((sum, item) => {
+      const amount = Number(item?.marketValue);
+      return Number.isFinite(amount) ? sum + amount : sum;
+    }, 0);
+    const valueDisplay = getDisplayAmountByCurrency(null, totalValueUsd, displayCurrency);
+    const valueText = formatAmountByCurrency(valueDisplay, displayCurrency);
+
+    return {
+      totalBalance,
+      valueText,
+    };
+  }
 
   function normalizeHistoryItem(item) {
     if (!item || typeof item !== 'object') return null;
@@ -2003,7 +2062,8 @@
   /* ── Skeleton rows ─────────────────────────────────────────────── */
   function renderLoading() {
     const displayCurrency = getActiveCurrency();
-    const rows = portfolioItems.length > 0 ? portfolioItems : [
+    const { regularItems } = splitPortfolioItems(portfolioItems);
+    const rows = regularItems.length > 0 ? regularItems : [
       { label: 'ASSET', ticker: 'TICKER', balance: 0, cost: 0, avg: null, price: null, marketValue: null, pnl: null, pnlPct: null },
       { label: 'ASSET', ticker: 'TICKER', balance: 0, cost: 0, avg: null, price: null, marketValue: null, pnl: null, pnlPct: null },
       { label: 'ASSET', ticker: 'TICKER', balance: 0, cost: 0, avg: null, price: null, marketValue: null, pnl: null, pnlPct: null },
@@ -2056,8 +2116,10 @@
   function renderPortfolio() {
     const displayCurrency = getActiveCurrency();
     const chartData = [];
+    const { regularItems, usdtItems } = splitPortfolioItems(portfolioItems);
+    const stableAssetSummary = getStableAssetSummary(usdtItems, displayCurrency);
     
-    const rows = portfolioItems.map(p => {
+    const rows = regularItems.map(p => {
       const balance = Number.isFinite(p.balance) ? p.balance : null;
       const cost = Number.isFinite(p.cost) ? p.cost : null;
       const avg = Number.isFinite(p.avg) ? p.avg : (balance !== null && balance > 0 ? p.cost / balance : null);
@@ -2105,14 +2167,19 @@
         <td>${plpCell}</td>
       </tr>`;
     });
-    document.getElementById('tbody').innerHTML = rows.join('');
+    document.getElementById('tbody').innerHTML = rows.length
+      ? rows.join('')
+      : '<tr><td colspan="8" style="text-align:center;color:var(--muted)">暂无普通资产（USDT 已归为特殊类）</td></tr>';
 
     // Footer totals row
     const totalPL = getDisplayAmountByCurrency(pnlRmb, pnlUsd, displayCurrency);
     const totalPLp = getSummaryPnlPct();
     const totalMktVal = getDisplayAmountByCurrency(valuePoolRmb, valuePoolUsd, displayCurrency);
+    const footerLeft = stableAssetSummary
+      ? `<span class="tfoot-special-badge">USDT 特殊类 · ${stableAssetSummary.totalBalance.toFixed(5)} · ${stableAssetSummary.valueText}</span>`
+      : '<span style="color:var(--muted)">合计</span>';
     document.getElementById('tfoot').innerHTML = `<tr>
-      <td colspan="5" style="text-align:left;color:var(--muted)">合计</td>
+      <td colspan="5" style="text-align:left">${footerLeft}</td>
       <td class="mono">${formatAmountByCurrency(totalMktVal, displayCurrency)}</td>
       <td class="mono ${clz(totalPL)}">${formatAmountByCurrency(totalPL, displayCurrency, true)}</td>
       <td class="${clz(totalPLp)}">${pct(totalPLp)}</td>

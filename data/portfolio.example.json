@@ -1,5 +1,5 @@
 {
-  "capitalRmb": 2967.44,
+  "capitalRmb": 3367.44,
   "items": [
     {
       "label": "UBERON",
@@ -35,6 +35,12 @@
       "label": "USDT",
       "ticker": "USDT",
       "cost": 50,
+      "enabled": true
+    },
+    {
+      "label": "PDDON",
+      "ticker": "PDD",
+      "cost": 125,
       "enabled": true
     }
   ]
