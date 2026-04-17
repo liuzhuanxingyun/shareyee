@@ -5,13 +5,22 @@
   "description": "曾展鹏的个人作品集与投资看板",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
-  },
+    "start": "node server.js",
+    "db:migrate": "npx prisma migrate dev",
+    "db:generate": "npx prisma generate",
+    "db:studio": "npx prisma studio"
+      },
   "dependencies": {
-    "dotenv": "^16.4.5",
+    "@prisma/adapter-pg": "^7.7.0",
+    "@prisma/client": "^7.7.0",
     "express": "^4.18.2",
     "node-cron": "^3.0.3",
     "nodemailer": "^6.9.15",
+    "pg": "^8.20.0",
+    "prisma": "^7.7.0",
     "rss-parser": "^3.13.0"
+  },
+  "devDependencies": {
+    "dotenv": "^17.4.2"
   }
 }

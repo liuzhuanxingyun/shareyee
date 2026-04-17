@@ -1,0 +1,99 @@
+// Prisma Schema - 数据模型定义
+// 文档: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// 投资组合配置表（单例模式，通常只有一条记录）
+// ============================================
+model PortfolioConfig {
+  id         String   @id @default(cuid())
+  capitalRmb Float    // 总资本（人民币）
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// 持仓项表
+model PortfolioItem {
+  id              String   @id @default(cuid())
+  label           String   // 显示标签
+  ticker          String   // 股票/代币代码
+  cost            Float    // 投入成本
+  enabled         Boolean  @default(true) // 是否启用
+  shares          Float?   // 持股数（可选）
+  contractAddress String?  // 合约地址（可选，用于加密货币）
+  sortOrder       Int      @default(0) // 排序字段
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([ticker])
+  @@index([enabled])
+}
+
+// ============================================
+// 稀有度配置表
+// ============================================
+model RarityConfig {
+  id          String   @id @default(cuid())
+  name        String   @unique // 稀有度名称：有趣、特别、惊喜、人生
+  color       String   // 颜色代码
+  probability Float    // 概率百分比
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  cards Card[]
+}
+
+// 卡片表
+model Card {
+  id         String       @id // 卡片 ID，如 NB-001
+  title      String       // 标题
+  text       String       // 描述
+  image      String       // 图片路径
+  rarityName String       // 外键字段
+  rarity     RarityConfig @relation(fields: [rarityName], references: [name])
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([rarityName])
+}
+
+// ============================================
+// 盈亏历史记录表
+// ============================================
+model PnlHistory {
+  id               String   @id @default(cuid())
+  date             String   @unique // 日期，如 2026-03-25
+  recordedAt       DateTime // 记录时间戳
+  timezone         String   // 时区
+  trigger          String   // 触发来源：cron/manual
+  totalCost        Float?   // 总成本
+  totalMarketValue Float?   // 总市值
+  totalPnl         Float?   // 总盈亏
+  totalPnlPct      Float?   // 盈亏百分比
+  totalPnlCny      Float?   // 盈亏人民币
+  forexRate        Float?   // 汇率
+  win              Boolean  @default(false) // 是否盈利
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([date])
+  @@index([recordedAt])
+}
+
+// ============================================
+// 元数据表（存储版本信息等）
+// ============================================
+model Metadata {
+  id        String   @id @default(cuid())
+  key       String   @unique // 键
+  value     String   // 值
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

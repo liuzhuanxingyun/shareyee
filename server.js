@@ -1,12 +1,11 @@
+import 'dotenv/config';
 import express            from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import cron              from 'node-cron';
 import nodemailer        from 'nodemailer';
-import dotenv            from 'dotenv';
-
-dotenv.config();
+import { prisma }        from './lib/prisma.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = dirname(__filename);
@@ -16,9 +15,6 @@ const PORT = process.env.PORT || 3000;
 const NEWS_TIMEOUT_MS = 6000;
 const EMAIL_TIMEZONE = 'Asia/Shanghai';
 const MAP_FETCH_TIMEOUT_MS = 8000;
-const PORTFOLIO_FILE = process.env.PORTFOLIO_FILE || join(__dirname, 'data', 'portfolio.private.json');
-const WIN_OR_NOT_DIR = join(__dirname, 'data', 'winOrNot');
-const WIN_OR_NOT_FILE = join(WIN_OR_NOT_DIR, 'pnl-history.json');
 const WEB3_WALLET_ADDRESS = process.env.WEB3_WALLET_ADDRESS || process.env.WALLET_ADDRESS || '0x5920efce45f6221f33c6923aa4e25951357389ca';
 const WEB3_CHAIN = process.env.WEB3_CHAIN || 'bsc';
 const MORALIS_API_KEY = process.env.MORALIS_API_KEY || '';
@@ -595,89 +591,24 @@ function resolveWalletToken(item, tokenIndex) {
   return selectBestToken(matches);
 }
 
-function parsePortfolioItem(raw, index) {
-  if (!raw || typeof raw !== 'object') {
-    throw new Error(`Invalid portfolio item at index ${index}: must be an object`);
-  }
-
-  const label = String(raw.label || '').trim();
-  const ticker = String(raw.ticker || '').trim().toUpperCase();
-  const cost = Number(raw.cost);
-  const shares = raw.shares == null || raw.shares === '' ? null : Number(raw.shares);
-  const contractAddress = normalizeAddress(raw.contractAddress || raw.tokenAddress || raw.address);
-  const enabled = raw.enabled === false ? false : true;
-
-  if (!label) throw new Error(`Invalid portfolio item at index ${index}: label is required`);
-  if (!/^[A-Z.]{1,12}$/.test(ticker)) {
-    throw new Error(`Invalid portfolio item at index ${index}: ticker must be uppercase letters/dot`);
-  }
-  if (!Number.isFinite(cost) || cost < 0) {
-    throw new Error(`Invalid portfolio item at index ${index}: cost must be >= 0`);
-  }
-
-  const item = { label, ticker, cost, enabled };
-
-  if (Number.isFinite(shares) && shares > 0) {
-    item.shares = shares;
-  }
-
-  if (contractAddress) {
-    item.contractAddress = contractAddress;
-  }
-
-  return item;
-}
-
-function parsePortfolioDefinition(raw) {
-  if (Array.isArray(raw)) {
-    if (raw.length === 0) {
-      throw new Error(`Portfolio file must be a non-empty array or an object with a non-empty items array: ${PORTFOLIO_FILE}`);
-    }
-    return { capitalRmb: null, items: raw };
-  }
-
-  if (!raw || typeof raw !== 'object') {
-    throw new Error(`Invalid portfolio file: expected an array or an object with an items array: ${PORTFOLIO_FILE}`);
-  }
-
-  const items = Array.isArray(raw.items) ? raw.items : [];
-  if (items.length === 0) {
-    throw new Error(`Portfolio file must contain a non-empty items array: ${PORTFOLIO_FILE}`);
-  }
-
-  const capitalRmb = toNumberOrNull(raw.capitalRmb ?? raw.inputPoolRmb ?? raw.cashReserveRmb);
-  if (capitalRmb !== null && capitalRmb < 0) {
-    throw new Error(`Invalid portfolio file: capitalRmb must be >= 0: ${PORTFOLIO_FILE}`);
-  }
-
-  return { capitalRmb, items };
-}
-
 async function loadPortfolio() {
-  let text;
-  try {
-    text = await readFile(PORTFOLIO_FILE, 'utf8');
-  } catch (err) {
-    if (err.code === 'ENOENT') {
-      throw new Error(`Portfolio file not found: ${PORTFOLIO_FILE}`);
-    }
-    throw err;
-  }
-
-  let parsed;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    throw new Error(`Invalid JSON in portfolio file: ${PORTFOLIO_FILE}`);
-  }
-
-  const { capitalRmb, items } = parsePortfolioDefinition(parsed);
+  // 从数据库加载持仓配置
+  const config = await prisma.portfolioConfig.findFirst();
+  const items = await prisma.portfolioItem.findMany({
+    where: { enabled: true },
+    orderBy: { sortOrder: 'asc' }
+  });
 
   return {
-    capitalRmb,
-    items: items
-      .map(parsePortfolioItem)
-      .filter(item => item.enabled !== false),
+    capitalRmb: config?.capitalRmb ?? null,
+    items: items.map(item => ({
+      label: item.label,
+      ticker: item.ticker,
+      cost: item.cost,
+      enabled: item.enabled,
+      shares: item.shares,
+      contractAddress: item.contractAddress,
+    })),
   };
 }
 
@@ -862,60 +793,29 @@ function chinaDateString(date = new Date()) {
 }
 
 async function loadWinOrNotHistory() {
-  try {
-    const text = await readFile(WIN_OR_NOT_FILE, 'utf8');
-    const parsed = JSON.parse(text);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (err) {
-    if (err.code === 'ENOENT') return [];
-    throw err;
-  }
-}
-
-function normalizeWinOrNotHistory(history) {
-  const byDate = new Map();
-
-  for (const record of Array.isArray(history) ? history : []) {
-    if (!record || typeof record !== 'object') continue;
-
-    const date = String(record.date ?? '').trim();
-    if (!date) continue;
-
-    const normalizedRecord = {
-      ...record,
-      date,
-      recordedAt: String(record.recordedAt ?? '').trim() || null,
-    };
-
-    const existing = byDate.get(date);
-    if (!existing) {
-      byDate.set(date, normalizedRecord);
-      continue;
-    }
-
-    const currentTime = Date.parse(normalizedRecord.recordedAt || normalizedRecord.date || '');
-    const existingTime = Date.parse(existing.recordedAt || existing.date || '');
-
-    if (!Number.isFinite(existingTime) || (Number.isFinite(currentTime) && currentTime >= existingTime)) {
-      byDate.set(date, normalizedRecord);
-    }
-  }
-
-  return [...byDate.values()].sort((left, right) => {
-    const leftTime = Date.parse(left.recordedAt || left.date || '');
-    const rightTime = Date.parse(right.recordedAt || right.date || '');
-
-    if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) {
-      return leftTime - rightTime;
-    }
-
-    return String(left.date).localeCompare(String(right.date));
+  // 从数据库加载盈亏历史
+  const records = await prisma.pnlHistory.findMany({
+    orderBy: { recordedAt: 'asc' }
   });
+
+  return records.map(r => ({
+    date: r.date,
+    recordedAt: r.recordedAt.toISOString(),
+    timezone: r.timezone,
+    trigger: r.trigger,
+    totalCost: r.totalCost,
+    totalMarketValue: r.totalMarketValue,
+    totalPnl: r.totalPnl,
+    totalPnlPct: r.totalPnlPct,
+    totalPnlCny: r.totalPnlCny,
+    forexRate: r.forexRate,
+    win: r.win,
+  }));
 }
 
 async function appendWinOrNotRecord(reason = 'cron') {
   const report = await buildPortfolioReport();
-  const history = normalizeWinOrNotHistory(await loadWinOrNotHistory());
+  const date = chinaDateString(new Date(report.generatedAt));
   const inputPoolRmb = Number.isFinite(report.inputPoolRmb) ? Number(report.inputPoolRmb.toFixed(2)) : null;
   const inputPoolUsd = Number.isFinite(report.inputPoolUsd) ? Number(report.inputPoolUsd.toFixed(2)) : null;
   const valuePoolUsd = Number.isFinite(report.valuePoolUsd) ? Number(report.valuePoolUsd.toFixed(2)) : null;
@@ -924,43 +824,43 @@ async function appendWinOrNotRecord(reason = 'cron') {
   const totalPnlRmb = Number.isFinite(report.totalPnlRmb) ? Number(report.totalPnlRmb.toFixed(2)) : null;
   const totalPnlPct = Number.isFinite(report.totalPnlPct) ? Number(report.totalPnlPct.toFixed(4)) : null;
 
-  const nextRecord = {
-    date: chinaDateString(new Date(report.generatedAt)),
-    recordedAt: report.generatedAt,
-    timezone: EMAIL_TIMEZONE,
-    trigger: reason,
-    capitalRmb: inputPoolRmb,
-    capitalUsd: inputPoolUsd,
-    inputPoolRmb,
-    inputPoolUsd,
-    valuePoolUsd,
-    valuePoolRmb,
-    totalCost: inputPoolUsd,
-    totalCostRmb: inputPoolRmb,
-    totalCostUsd: inputPoolUsd,
-    totalMarketValue: valuePoolUsd,
-    totalMarketValueUsd: valuePoolUsd,
-    totalMarketValueRmb: valuePoolRmb,
-    totalPnl: totalPnlUsd,
-    totalPnlUsd,
-    totalPnlRmb,
-    totalPnlPct,
-    totalPnlCny: totalPnlRmb,
-    forexRate: report.forexRate !== null ? Number(report.forexRate.toFixed(6)) : null,
-    win: Number.isFinite(report.totalPnl) ? report.totalPnl >= 0 : false,
-  };
+  // 使用数据库 upsert 操作
+  await prisma.pnlHistory.upsert({
+    where: { date },
+    create: {
+      date,
+      recordedAt: new Date(report.generatedAt),
+      timezone: EMAIL_TIMEZONE,
+      trigger: reason,
+      totalCost: inputPoolUsd,
+      totalMarketValue: valuePoolUsd,
+      totalPnl: totalPnlUsd,
+      totalPnlPct,
+      totalPnlCny: totalPnlRmb,
+      forexRate: report.forexRate !== null ? Number(report.forexRate.toFixed(6)) : null,
+      win: Number.isFinite(report.totalPnl) ? report.totalPnl >= 0 : false,
+    },
+    update: {
+      recordedAt: new Date(report.generatedAt),
+      timezone: EMAIL_TIMEZONE,
+      trigger: reason,
+      totalCost: inputPoolUsd,
+      totalMarketValue: valuePoolUsd,
+      totalPnl: totalPnlUsd,
+      totalPnlPct,
+      totalPnlCny: totalPnlRmb,
+      forexRate: report.forexRate !== null ? Number(report.forexRate.toFixed(6)) : null,
+      win: Number.isFinite(report.totalPnl) ? report.totalPnl >= 0 : false,
+    }
+  });
 
-  const nextHistory = history.filter(record => record.date !== nextRecord.date);
-  nextHistory.push(nextRecord);
-
-  await mkdir(WIN_OR_NOT_DIR, { recursive: true });
-  await writeFile(WIN_OR_NOT_FILE, `${JSON.stringify(nextHistory, null, 2)}\n`, 'utf8');
+  const count = await prisma.pnlHistory.count();
 
   return {
     recordedAt: report.generatedAt,
     totalPnlPct: report.totalPnlPct,
     win: report.totalPnl >= 0,
-    count: nextHistory.length,
+    count,
   };
 }
 
@@ -1069,7 +969,7 @@ app.get('/api/portfolio', async (_req, res) => {
       totalPnlPct: report.totalPnlPct,
       totalPnlCny: report.totalPnlCny,
       forexRate: report.forexRate,
-      source: PORTFOLIO_FILE,
+      source: 'database',
       dataSource: 'moralis',
       timestamp: new Date().toISOString(),
     });
@@ -1082,12 +982,12 @@ app.get('/api/portfolio', async (_req, res) => {
 // ─── GET /api/win-or-not/history ─────────────────────────────────────────
 app.get('/api/win-or-not/history', async (_req, res) => {
   try {
-    const history = normalizeWinOrNotHistory(await loadWinOrNotHistory());
+    const history = await loadWinOrNotHistory();
     res.json({
       success: true,
       items: history,
       count: history.length,
-      source: WIN_OR_NOT_FILE,
+      source: 'database',
       timestamp: new Date().toISOString(),
     });
   } catch (err) {
