@@ -11,3 +11,5 @@ data/pnl-history.json
 data/notbot.cards.json
 
 /generated/prisma
+scripts/import-capital-flow.mjs
+Binance-C2C-订单历史记录-202604171645(UTC+8).csv

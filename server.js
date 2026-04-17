@@ -593,14 +593,20 @@ function resolveWalletToken(item, tokenIndex) {
 
 async function loadPortfolio() {
   // 从数据库加载持仓配置
-  const config = await prisma.portfolioConfig.findFirst();
   const items = await prisma.portfolioItem.findMany({
     where: { enabled: true },
     orderBy: { sortOrder: 'asc' }
   });
 
+  // 从 CapitalFlow 汇总计算当前总投入（仅 Completed）
+  const aggregate = await prisma.capitalFlow.aggregate({
+    _sum: { fiatAmount: true },
+    where: { status: 'Completed' }
+  });
+  const capitalRmb = aggregate._sum.fiatAmount ?? null;
+
   return {
-    capitalRmb: config?.capitalRmb ?? null,
+    capitalRmb,
     items: items.map(item => ({
       label: item.label,
       ticker: item.ticker,

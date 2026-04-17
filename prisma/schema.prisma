@@ -10,27 +10,40 @@ datasource db {
 }
 
 // ============================================
-// 投资组合配置表（单例模式，通常只有一条记录）
+// 投入池资金流水表
 // ============================================
-model PortfolioConfig {
-  id         String   @id @default(cuid())
-  capitalRmb Float    // 总资本（人民币）
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+model CapitalFlow {
+  id           String   @id @default(cuid())
+  orderId      String   @unique // 订单编号，防重复导入
+  orderType    String   // Buy / Sell / Deposit / Withdraw
+  asset        String   // 资产代码：USDT / CNY
+  fiatCurrency String   // 法币代码：CNY
+  fiatAmount   Float    // 总价格（法币金额）
+  unitPrice    Float    // 单价
+  assetAmount  Float    // 数量（资产金额）
+  counterparty String?  // 交易对手，可选
+  status       String   // Completed / Cancelled
+  occurredAt   DateTime // 交易发生时间
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([occurredAt])
+  @@index([status])
 }
 
 // 持仓项表
 model PortfolioItem {
-  id              String   @id @default(cuid())
-  label           String   // 显示标签
-  ticker          String   // 股票/代币代码
-  cost            Float    // 投入成本
-  enabled         Boolean  @default(true) // 是否启用
-  shares          Float?   // 持股数（可选）
-  contractAddress String?  // 合约地址（可选，用于加密货币）
-  sortOrder       Int      @default(0) // 排序字段
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id              String          @id @default(cuid())
+  label           String          // 显示标签
+  ticker          String          // 股票/代币代码
+  cost            Float           // 投入成本
+  enabled         Boolean         @default(true) // 是否启用
+  shares          Float?          // 持股数（可选）
+  contractAddress String?         // 合约地址（可选，用于加密货币）
+  sortOrder       Int             @default(0) // 排序字段
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  transactions    TransactionLog[]
 
   @@index([ticker])
   @@index([enabled])
@@ -65,6 +78,23 @@ model Card {
 }
 
 // ============================================
+// 操作记录表（买卖交易日志）
+// ============================================
+model TransactionLog {
+  id              String        @id @default(cuid())
+  portfolioItemId String
+  portfolioItem   PortfolioItem @relation(fields: [portfolioItemId], references: [id])
+  type            String        // Buy / Sell / Deposit / Withdraw
+  cost            Float         // 花费金额（USD）
+  occurredAt      DateTime      // 操作发生时间
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([portfolioItemId])
+  @@index([occurredAt])
+}
+
+// ============================================
 // 盈亏历史记录表
 // ============================================
 model PnlHistory {
@@ -87,13 +117,3 @@ model PnlHistory {
   @@index([recordedAt])
 }
 
-// ============================================
-// 元数据表（存储版本信息等）
-// ============================================
-model Metadata {
-  id        String   @id @default(cuid())
-  key       String   @unique // 键
-  value     String   // 值
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
