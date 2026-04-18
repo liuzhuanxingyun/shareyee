@@ -32,6 +32,21 @@
       --avatar-y: 28%;
     }
 
+    [data-theme="light"] {
+      --bg:          #f8fafc;
+      --surface:     rgba(0,0,0,0.03);
+      --surface-2:   rgba(0,0,0,0.055);
+      --border:      rgba(0,0,0,0.08);
+      --border-2:    rgba(0,0,0,0.05);
+      --accent:      #6366f1;
+      --accent-2:    #8b5cf6;
+      --green:       #10b981;
+      --red:         #ef4444;
+      --text:        #0f172a;
+      --text-2:      #64748b;
+      --muted:       #94a3b8;
+    }
+
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       background: var(--bg);
@@ -50,6 +65,32 @@
         radial-gradient(ellipse 60% 40% at 90% 110%, rgba(167,139,250,.08) 0%, transparent 55%);
       pointer-events: none;
       z-index: 0;
+    }
+
+    /* Aurora borealis background effect */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: -100%;
+      width: 300%;
+      height: 300%;
+      background:
+        radial-gradient(ellipse 80% 30% at 30% 30%, rgba(52,211,153,.40) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 25% at 60% 20%, rgba(56,189,248,.35) 0%, transparent 45%),
+        radial-gradient(ellipse 70% 35% at 50% 50%, rgba(167,139,250,.30) 0%, transparent 50%),
+        radial-gradient(ellipse 50% 40% at 40% 70%, rgba(34,211,238,.25) 0%, transparent 45%);
+      filter: blur(80px);
+      animation: aurora-drift 8s ease-in-out infinite alternate;
+      pointer-events: none;
+      z-index: 0;
+      mix-blend-mode: screen;
+    }
+    @keyframes aurora-drift {
+      0%   { transform: translate(-20%, -15%) rotate(-5deg) scale(1); }
+      25%  { transform: translate(15%, -10%) rotate(3deg) scale(1.15); }
+      50%  { transform: translate(-10%, 15%) rotate(-3deg) scale(0.9); }
+      75%  { transform: translate(20%, 8%) rotate(5deg) scale(1.1); }
+      100% { transform: translate(-15%, -20%) rotate(-3deg) scale(1); }
     }
 
     .container {
@@ -79,7 +120,7 @@
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       letter-spacing: -0.2px;
     }
-    .nav-links { display: flex; gap: 4px; }
+    .nav-links { display: flex; gap: 4px; align-items: center; }
     .nav-links a {
       color: var(--text-2); text-decoration: none;
       font-size: .82rem; font-weight: 500;
@@ -87,6 +128,15 @@
       transition: color .18s, background .18s;
     }
     .nav-links a:hover { color: var(--text); background: rgba(255,255,255,.06); }
+    .theme-toggle {
+      width: 36px; height: 36px; border-radius: 10px;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--text-2); cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 16px; margin-left: 8px;
+      transition: background .2s, color .2s, border-color .2s;
+    }
+    .theme-toggle:hover { background: var(--surface-2); color: var(--text); }
 
     /* ── Section labels ─────────────────────────────────────────── */
     .s-label {
@@ -224,6 +274,244 @@
     .exp-icon.apple      { background: rgba(156,163,175,.1);  }
     .exp-card-title { font-size: .875rem; font-weight: 600; margin-bottom: 3px; }
     .exp-card-desc  { font-size: .78rem; color: var(--muted); line-height: 1.6; }
+
+    /* ── Section 5 · Calendar ─────────────────────────────────── */
+    #calendar { padding: 100px 0 80px; }
+
+    .calendar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .calendar-month-nav {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .cal-nav-btn {
+      width: 32px; height: 32px; border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-2);
+      font-size: 1.1rem; line-height: 1;
+      cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
+      transition: background .2s, color .2s, border-color .2s;
+    }
+    .cal-nav-btn:hover { background: var(--surface-2); color: var(--text); border-color: var(--accent); }
+    .cal-month-label {
+      font-size: 1.15rem; font-weight: 700; color: var(--text);
+      min-width: 120px; text-align: center;
+      letter-spacing: .3px;
+    }
+    .calendar-tabs {
+      display: flex; gap: 8px; align-items: center;
+    }
+    .cal-tab {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-2);
+      font-size: .82rem; font-weight: 500;
+      cursor: pointer;
+      transition: background .2s, color .2s, border-color .2s, box-shadow .2s;
+    }
+    .cal-tab:hover { background: var(--surface-2); color: var(--text); }
+    .cal-tab.active {
+      color: var(--text);
+      border-color: var(--tab-color);
+      box-shadow: 0 0 0 1px var(--tab-color), inset 0 0 10px rgba(255,255,255,.03);
+    }
+    [data-theme="light"] .cal-tab.active {
+      box-shadow: 0 0 0 1px var(--tab-color), inset 0 0 10px rgba(0,0,0,.03);
+    }
+    .cal-tab-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      display: inline-block;
+    }
+
+    .calendar-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 20px;
+    }
+    .calendar-weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .calendar-weekdays > div {
+      text-align: center;
+      font-size: .75rem;
+      font-weight: 600;
+      color: var(--muted);
+      padding: 4px 0;
+    }
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+    }
+    .cal-cell {
+      aspect-ratio: 1 / 1;
+      min-height: 80px;
+      background: var(--surface-2);
+      border: 1px solid var(--border-2);
+      border-radius: 12px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      cursor: pointer;
+      transition: border-color .2s, transform .15s, box-shadow .2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .cal-cell:hover {
+      border-color: var(--tab-color, var(--accent));
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,.12);
+    }
+    [data-theme="light"] .cal-cell:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,.06);
+    }
+    .cal-cell.empty {
+      background: transparent;
+      border-color: transparent;
+      cursor: default;
+      pointer-events: none;
+    }
+    .cal-cell.empty:hover {
+      transform: none;
+      box-shadow: none;
+    }
+    .cal-cell-number {
+      font-size: .78rem;
+      font-weight: 600;
+      color: var(--text-2);
+      align-self: flex-end;
+      line-height: 1;
+    }
+    .cal-cell-content {
+      margin-top: auto;
+      width: 100%;
+      font-size: .72rem;
+      line-height: 1.35;
+      color: var(--text);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      word-break: break-all;
+    }
+    .cal-cell-content .cal-pnl {
+      font-weight: 700;
+      font-size: .78rem;
+    }
+    .cal-cell-content .cal-pnl.pos { color: var(--green); }
+    .cal-cell-content .cal-pnl.neg { color: var(--red); }
+    .cal-cell-content .cal-pnl-pct {
+      font-size: .68rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .cal-cell.has-data::after {
+      content: '';
+      position: absolute;
+      top: 8px; left: 8px;
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--tab-color, var(--accent));
+    }
+
+    /* Calendar modal */
+    .cal-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .cal-modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      backdrop-filter: blur(6px);
+    }
+    .cal-modal-content {
+      position: relative;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,.35);
+      z-index: 1;
+    }
+    .cal-modal-close {
+      position: absolute;
+      top: 12px; right: 12px;
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-2);
+      font-size: 1.2rem; line-height: 1;
+      cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
+      transition: background .2s, color .2s;
+    }
+    .cal-modal-close:hover { background: var(--surface-2); color: var(--text); }
+    .cal-modal-date {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 16px;
+      letter-spacing: .3px;
+    }
+    .cal-modal-body {
+      font-size: .9rem;
+      color: var(--text-2);
+      line-height: 1.7;
+    }
+    .cal-modal-body .modal-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-2);
+    }
+    .cal-modal-body .modal-row:last-child { border-bottom: none; }
+    .cal-modal-body .modal-label { color: var(--muted); font-size: .82rem; }
+    .cal-modal-body .modal-value { color: var(--text); font-weight: 600; font-size: .9rem; }
+    .cal-modal-body .modal-value.pos { color: var(--green); }
+    .cal-modal-body .modal-value.neg { color: var(--red); }
+    .cal-modal-body .modal-desc {
+      margin-top: 12px;
+      padding: 12px;
+      background: var(--surface);
+      border-radius: 10px;
+      border: 1px solid var(--border-2);
+      color: var(--text);
+      font-size: .88rem;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 640px) {
+      .calendar-header { flex-direction: column; align-items: flex-start; }
+      .cal-cell { min-height: 64px; padding: 6px; }
+      .cal-cell-content { -webkit-line-clamp: 1; font-size: .68rem; }
+      .cal-cell-number { font-size: .7rem; }
+    }
 
     /* ── Section 2 · Investment ─────────────────────────────────── */
     #investment { padding: 72px 0 80px; border-top: 1px solid var(--border-2); }
@@ -1299,6 +1587,95 @@
       .notbot-stage-wrap { padding: 16px; min-height: 430px; }
       .map-canvas { height: 340px; }
     }
+
+    /* ── Light theme overrides ──────────────────────────────────── */
+    [data-theme="light"] nav { background: rgba(248,250,252,.88); }
+    [data-theme="light"] .nav-links a:hover { background: rgba(0,0,0,.06); }
+    [data-theme="light"] body::before { opacity: .5; }
+    [data-theme="light"] body::after {
+      opacity: 1;
+      background:
+        radial-gradient(ellipse 80% 30% at 30% 30%, rgba(52,211,153,.25) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 25% at 60% 20%, rgba(56,189,248,.22) 0%, transparent 45%),
+        radial-gradient(ellipse 70% 35% at 50% 50%, rgba(167,139,250,.18) 0%, transparent 50%),
+        radial-gradient(ellipse 50% 40% at 40% 70%, rgba(34,211,238,.15) 0%, transparent 45%);
+      filter: blur(100px);
+      mix-blend-mode: multiply;
+    }
+    [data-theme="light"] .avatar { border-color: rgba(0,0,0,.12); }
+    [data-theme="light"] .tag { background: rgba(0,0,0,.04); }
+    [data-theme="light"] .wallet-meta { background: rgba(0,0,0,.03); }
+    [data-theme="light"] .asset-visual { background: rgba(0,0,0,.03); }
+    [data-theme="light"] tbody tr:hover { background: rgba(0,0,0,.03); }
+    [data-theme="light"] tfoot tr { background: rgba(0,0,0,.02); }
+    [data-theme="light"] .news-card { background: rgba(0,0,0,.02); }
+    [data-theme="light"] .news-card:hover { background: var(--surface-2); }
+    [data-theme="light"] .refresh-btn { background: rgba(99,102,241,.1); }
+    [data-theme="light"] .refresh-btn:hover { background: rgba(99,102,241,.18); }
+    [data-theme="light"] .mkt-badge.closed { background: rgba(71,85,105,.06); border-color: rgba(71,85,105,.15); }
+    [data-theme="light"] @keyframes shimmer {
+      0%   { background-position: -200% 0; }
+      100% { background-position:  200% 0; }
+    }
+    [data-theme="light"] .skeleton-row {
+      background: linear-gradient(90deg,
+        rgba(0,0,0,.03) 25%,
+        rgba(0,0,0,.08) 50%,
+        rgba(0,0,0,.03) 75%);
+      background-size: 200% 100%;
+    }
+    [data-theme="light"] .notbot-panel { background: rgba(0,0,0,.02); }
+    [data-theme="light"] .notbot-stage-wrap { background: rgba(0,0,0,.02); }
+    [data-theme="light"] .notbot-info { background: rgba(0,0,0,.02); }
+    [data-theme="light"] .city-chip { background: rgba(34,211,238,.08); }
+    [data-theme="light"] .history-range { background: rgba(0,0,0,.03); }
+    [data-theme="light"] .music-link {
+      background: linear-gradient(135deg, rgba(14,116,144,.18), rgba(8,47,73,.12));
+      box-shadow: inset 0 1px 0 rgba(0,0,0,.04), 0 6px 14px rgba(8,145,178,.12);
+    }
+    [data-theme="light"] .music-link:hover {
+      background: linear-gradient(135deg, rgba(14,116,144,.28), rgba(8,47,73,.18));
+    }
+    [data-theme="light"] .notbot-face-back {
+      background:
+        radial-gradient(circle at 20% 18%, rgba(34,197,94,.08), transparent 50%),
+        radial-gradient(circle at 80% 78%, rgba(22,163,74,.05), transparent 50%),
+        linear-gradient(145deg, rgba(245,252,246,.90), rgba(235,248,237,.92));
+      color: #15803d;
+    }
+    [data-theme="light"] .notbot-face-front {
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02)),
+        linear-gradient(150deg, rgba(245,252,246,.94), rgba(235,248,237,.96));
+    }
+    [data-theme="light"] .notbot-back-sub {
+      color: #15803d;
+    }
+    [data-theme="light"] .map-wrap {
+      background:
+        radial-gradient(circle at 30% 20%, rgba(14,116,144,.10), transparent 45%),
+        linear-gradient(180deg, rgba(236,254,255,.65), rgba(240,249,255,.55));
+    }
+    [data-theme="light"] .music-switch {
+      background: linear-gradient(135deg, rgba(14,116,144,.10), rgba(8,47,73,.08));
+      border-color: rgba(34,211,238,.35);
+    }
+    [data-theme="light"] .music-switch-indicator {
+      background: linear-gradient(135deg, rgba(14,116,144,.45), rgba(8,47,73,.35));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.20), 0 4px 10px rgba(8,145,178,.15);
+    }
+    [data-theme="light"] audio {
+      background: linear-gradient(135deg, rgba(236,254,255,.65), rgba(240,249,255,.55));
+      border-color: rgba(34,211,238,.35);
+    }
+    [data-theme="light"] audio::-webkit-media-controls-enclosure {
+      background: linear-gradient(135deg, rgba(236,254,255,.75), rgba(240,249,255,.65));
+      border-color: rgba(34,211,238,.30);
+    }
+    [data-theme="light"] audio::-webkit-media-controls-current-time-display,
+    [data-theme="light"] audio::-webkit-media-controls-time-remaining-display {
+      color: #0e7490;
+    }
   </style>
 </head>
 <body>
@@ -1312,6 +1689,8 @@
       <a href="#investment">投资看板</a>
       <a href="#interests">兴趣板块</a>
       <a href="#notbot">Notbot 抽卡</a>
+      <a href="#calendar">日历</a>
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="切换主题">☀️</button>
     </div>
   </div>
 </nav>
@@ -1368,17 +1747,17 @@
             </div>
           </div>
           <div class="exp-card">
-            <div class="exp-icon backend">⚙️</div>
-            <div>
-              <div class="exp-card-title">后端开发实习（进行中）</div>
-              <div class="exp-card-desc">目前处于后端开发实习阶段，已实习 1 个月 ing，持续参与接口开发与服务维护</div>
-            </div>
-          </div>
-          <div class="exp-card">
             <div class="exp-icon apple">🍎</div>
             <div>
               <div class="exp-card-title">苹果 App Store 上架</div>
               <div class="exp-card-desc">拥有 iOS 应用开发与 App Store 审核、发布的完整经历</div>
+            </div>
+          </div>
+          <div class="exp-card">
+            <div class="exp-icon backend">⚙️</div>
+            <div>
+              <div class="exp-card-title">后端开发实习（进行中）</div>
+              <div class="exp-card-desc">目前处于后端开发实习阶段，已实习 1 个月 ing，持续参与接口开发与服务维护</div>
             </div>
           </div>
         </div>
@@ -1477,7 +1856,7 @@
         </div>
       </div>
       <div id="pnl-history-chart" class="history-chart"></div>
-      <details class="history-records">
+      <details class="history-records" style="display:none;">
         <summary>
           <span>历史记录明细</span>
           <span class="history-records-note">点击展开 / 收起</span>
@@ -1608,12 +1987,284 @@
   </div>
 </section>
 
+<!-- ── Section 5 · Calendar ──────────────────────────────────── -->
+<section id="calendar">
+  <div class="container">
+    <div class="s-label">Calendar</div>
+    <div class="s-title">每日<span>记录</span></div>
+
+    <div class="calendar-header">
+      <div class="calendar-month-nav">
+        <button id="cal-prev" class="cal-nav-btn" aria-label="上个月">‹</button>
+        <div id="cal-month-label" class="cal-month-label">2026年4月</div>
+        <button id="cal-next" class="cal-nav-btn" aria-label="下个月">›</button>
+      </div>
+      <div class="calendar-tabs">
+        <button class="cal-tab active" data-domain="workout" style="--tab-color:#fbbf24;">
+          <span class="cal-tab-dot" style="background:#fbbf24;"></span>健身
+        </button>
+        <button class="cal-tab" data-domain="investment" style="--tab-color:#34d399;">
+          <span class="cal-tab-dot" style="background:#34d399;"></span>投资
+        </button>
+        <button class="cal-tab" data-domain="study" style="--tab-color:#60a5fa;">
+          <span class="cal-tab-dot" style="background:#60a5fa;"></span>学习
+        </button>
+      </div>
+    </div>
+
+    <div class="calendar-card">
+      <div class="calendar-weekdays">
+        <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+      </div>
+      <div id="calendar-grid" class="calendar-grid"></div>
+    </div>
+  </div>
+</section>
+
+<!-- Calendar detail modal -->
+<div id="cal-modal" class="cal-modal" style="display:none;">
+  <div class="cal-modal-backdrop"></div>
+  <div class="cal-modal-content">
+    <button class="cal-modal-close" aria-label="关闭">×</button>
+    <div id="cal-modal-body"></div>
+  </div>
+</div>
+
 <footer>
   © 2025 曾展鹏 · Shareyee · All rights reserved
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 <script>
+  /* ── Theme toggle ──────────────────────────────────────────────── */
+  (function initTheme() {
+    const saved = localStorage.getItem('theme');
+    const isLight = saved === 'light';
+    if (isLight) document.documentElement.setAttribute('data-theme', 'light');
+    const btn = document.getElementById('themeToggle');
+    if (btn) btn.textContent = isLight ? '🌙' : '☀️';
+  })();
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    const html = document.documentElement;
+    const isLight = html.getAttribute('data-theme') === 'light';
+    if (isLight) {
+      html.removeAttribute('data-theme');
+      localStorage.setItem('theme', 'dark');
+      document.getElementById('themeToggle').textContent = '☀️';
+    } else {
+      html.setAttribute('data-theme', 'light');
+      localStorage.setItem('theme', 'light');
+      document.getElementById('themeToggle').textContent = '🌙';
+    }
+    if (typeof updateAllCharts === 'function') updateAllCharts();
+  });
+
+  /* ── Chart theme helper ────────────────────────────────────────── */
+  function getChartTheme() {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    return {
+      tooltipBg:     isLight ? 'rgba(255,255,255,0.96)' : 'rgba(8,8,18,0.94)',
+      tooltipBorder: isLight ? 'rgba(0,0,0,0.08)'       : 'rgba(255,255,255,0.1)',
+      tooltipText:   isLight ? '#0f172a'                : '#f1f5f9',
+      axisText:      isLight ? '#64748b'                : '#94a3b8',
+      splitLine:     isLight ? 'rgba(0,0,0,.06)'        : 'rgba(255,255,255,.06)',
+      axisLine:      isLight ? 'rgba(100,116,139,.35)'   : 'rgba(148,163,184,.35)',
+      markLine:      isLight ? 'rgba(100,116,139,.35)'   : 'rgba(148,163,184,.35)',
+      pieBorder:     isLight ? '#f8fafc'                : '#080812',
+      pieText:       isLight ? '#0f172a'                : '#f1f5f9',
+      mapArea:       isLight ? '#e2e8f0'                : '#0f172a',
+      mapBorder:     isLight ? 'rgba(100,116,139,.8)'   : 'rgba(148,163,184,.8)',
+      mapEmphasis:   isLight ? '#cbd5e1'                : '#1e293b',
+      loadingText:   isLight ? '#64748b'                : '#94a3b8',
+      maskColor:     isLight ? 'rgba(248,250,252,0.6)'  : 'rgba(8,8,18,0.6)',
+    };
+  }
+  function updateAllCharts() {
+    if (portfolioItems.length) renderPortfolio();
+    renderPnlHistory();
+    renderTravelMap();
+  }
+
+  /* ── Calendar ──────────────────────────────────────────────────── */
+  let calendarData = { workout: [], investment: [], study: [] };
+  let calendarCurrentDomain = 'workout';
+  let calendarCurrentDate = new Date();
+
+  const CALENDAR_DOMAIN_META = {
+    workout:    { color: '#fbbf24', label: '健身', api: '/api/calendar/workouts', field: 'exercises' },
+    investment: { color: '#34d399', label: '投资', api: '/api/win-or-not/history', field: 'totalPnl' },
+    study:      { color: '#60a5fa', label: '学习', api: '/api/calendar/studies', field: 'subject' },
+  };
+
+  async function fetchCalendarData(domain) {
+    const meta = CALENDAR_DOMAIN_META[domain];
+    try {
+      const res = await fetch(meta.api, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const payload = await res.json();
+      if (!payload?.success) throw new Error(payload?.error || 'API error');
+      calendarData[domain] = payload.items || [];
+    } catch (err) {
+      console.error(`[calendar-${domain}]`, err);
+      calendarData[domain] = [];
+    }
+  }
+
+  function getCalendarItemsForDate(dateStr) {
+    return calendarData[calendarCurrentDomain].filter(item => item.date === dateStr);
+  }
+
+  function formatCalendarMonthLabel(date) {
+    return `${date.getFullYear()}年${date.getMonth() + 1}月`;
+  }
+
+  function renderCalendar() {
+    const grid = document.getElementById('calendar-grid');
+    const label = document.getElementById('cal-month-label');
+    if (!grid || !label) return;
+
+    label.textContent = formatCalendarMonthLabel(calendarCurrentDate);
+
+    const year = calendarCurrentDate.getFullYear();
+    const month = calendarCurrentDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startPadding = firstDay.getDay();
+    const daysInMonth = lastDay.getDate();
+
+    let html = '';
+    for (let i = 0; i < startPadding; i++) {
+      html += '<div class="cal-cell empty"></div>';
+    }
+
+    const meta = CALENDAR_DOMAIN_META[calendarCurrentDomain];
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const items = getCalendarItemsForDate(dateStr);
+      const hasData = items.length > 0;
+
+      let contentHtml = '';
+      if (calendarCurrentDomain === 'investment' && hasData) {
+        const item = items[0];
+        const pnlClass = item.totalPnl >= 0 ? 'pos' : 'neg';
+        contentHtml = `
+          <div class="cal-pnl ${pnlClass}">${item.totalPnl >= 0 ? '+' : '-'}$${f2(Math.abs(item.totalPnl))}</div>
+          <div class="cal-pnl-pct ${pnlClass}">${item.totalPnl >= 0 ? '+' : '-'}${f2(Math.abs(item.totalPnlPct))}%</div>
+        `;
+      } else if (hasData) {
+        const text = items.map(i => i[meta.field]).join(' · ');
+        contentHtml = `<div>${escapeHtml(text)}</div>`;
+      }
+
+      html += `
+        <div class="cal-cell ${hasData ? 'has-data' : ''}" data-date="${dateStr}" style="--tab-color:${hasData ? meta.color : ''}">
+          <div class="cal-cell-number">${day}</div>
+          <div class="cal-cell-content">${contentHtml}</div>
+        </div>
+      `;
+    }
+
+    grid.innerHTML = html;
+    grid.querySelectorAll('.cal-cell:not(.empty)').forEach(cell => {
+      cell.addEventListener('click', () => openCalendarModal(cell.dataset.date));
+    });
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  function openCalendarModal(dateStr) {
+    const items = getCalendarItemsForDate(dateStr);
+    const modal = document.getElementById('cal-modal');
+    const body = document.getElementById('cal-modal-body');
+    if (!modal || !body) return;
+
+    const meta = CALENDAR_DOMAIN_META[calendarCurrentDomain];
+    let html = `<div class="cal-modal-date">${dateStr} · ${meta.label}</div>`;
+
+    if (!items.length) {
+      html += `<div class="cal-modal-body" style="color:var(--muted)">当日无记录</div>`;
+    } else if (calendarCurrentDomain === 'investment') {
+      const item = items[0];
+      const pnlClass = item.totalPnl >= 0 ? 'pos' : 'neg';
+      const sign = item.totalPnl >= 0 ? '+' : '-';
+      html += `
+        <div class="cal-modal-body">
+          <div class="modal-row"><span class="modal-label">浮动盈亏</span><span class="modal-value ${pnlClass}">${sign}$${f2(Math.abs(item.totalPnl))}</span></div>
+          <div class="modal-row"><span class="modal-label">盈亏比例</span><span class="modal-value ${pnlClass}">${sign}${f2(Math.abs(item.totalPnlPct))}%</span></div>
+          <div class="modal-row"><span class="modal-label">总成本</span><span class="modal-value">$${f2(item.totalCost)}</span></div>
+          <div class="modal-row"><span class="modal-label">总市值</span><span class="modal-value">$${f2(item.totalMarketValue)}</span></div>
+          <div class="modal-row"><span class="modal-label">盈亏(CNY)</span><span class="modal-value ${pnlClass}">${sign}¥${f2(Math.abs(item.totalPnlCny))}</span></div>
+          <div class="modal-row"><span class="modal-label">汇率</span><span class="modal-value">1 USD = ${f2(item.forexRate)} CNY</span></div>
+          <div class="modal-row"><span class="modal-label">记录时间</span><span class="modal-value">${new Date(item.recordedAt).toLocaleString('zh-CN')}</span></div>
+        </div>
+      `;
+    } else {
+      const item = items[0];
+      html += `
+        <div class="cal-modal-body">
+          <div class="modal-desc">${escapeHtml(item[meta.field])}</div>
+          ${item.duration ? `<div class="modal-row" style="margin-top:12px;border:none;"><span class="modal-label">时长</span><span class="modal-value">${item.duration} 分钟</span></div>` : ''}
+        </div>
+      `;
+    }
+
+    body.innerHTML = html;
+    modal.style.display = 'flex';
+  }
+
+  function closeCalendarModal() {
+    const modal = document.getElementById('cal-modal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function switchCalendarDomain(domain) {
+    calendarCurrentDomain = domain;
+    document.querySelectorAll('.cal-tab').forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.domain === domain);
+    });
+    renderCalendar();
+  }
+
+  function initCalendar() {
+    const prevBtn = document.getElementById('cal-prev');
+    const nextBtn = document.getElementById('cal-next');
+    const tabs = document.querySelectorAll('.cal-tab');
+    const modal = document.getElementById('cal-modal');
+    const closeBtn = modal?.querySelector('.cal-modal-close');
+    const backdrop = modal?.querySelector('.cal-modal-backdrop');
+
+    if (prevBtn) {
+      prevBtn.addEventListener('click', () => {
+        calendarCurrentDate.setMonth(calendarCurrentDate.getMonth() - 1);
+        renderCalendar();
+      });
+    }
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => {
+        calendarCurrentDate.setMonth(calendarCurrentDate.getMonth() + 1);
+        renderCalendar();
+      });
+    }
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => switchCalendarDomain(tab.dataset.domain));
+    });
+
+    if (closeBtn) closeBtn.addEventListener('click', closeCalendarModal);
+    if (backdrop) backdrop.addEventListener('click', closeCalendarModal);
+
+    Promise.all([
+      fetchCalendarData('workout'),
+      fetchCalendarData('investment'),
+      fetchCalendarData('study'),
+    ]).then(() => renderCalendar());
+  }
+
   /* ── Portfolio data (from backend) ─────────────────────────────── */
   let portfolioItems = [];
   let inputPoolRmb = null;
@@ -1922,8 +2573,9 @@
       tbodyEl.innerHTML = '<tr><td colspan="5" class="history-empty">暂无可用历史数据</td></tr>';
 
       if (pnlHistoryChart) {
+        const ct = getChartTheme();
         pnlHistoryChart.clear();
-        pnlHistoryChart.showLoading({ text: '暂无历史数据', color: '#818cf8', textColor: '#94a3b8', maskColor: 'rgba(255,255,255,0.05)' });
+        pnlHistoryChart.showLoading({ text: '暂无历史数据', color: '#818cf8', textColor: ct.loadingText, maskColor: ct.maskColor });
       }
       return;
     }
@@ -1958,6 +2610,7 @@
     const yAxisMax = chartMin === chartMax ? 1 : chartMax;
 
     pnlHistoryChart.hideLoading();
+    const ct = getChartTheme();
     pnlHistoryChart.setOption({
       animationDuration: 500,
       backgroundColor: 'transparent',
@@ -1965,9 +2618,9 @@
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'line' },
-        backgroundColor: 'rgba(8,8,18,0.94)',
-        borderColor: 'rgba(255,255,255,0.1)',
-        textStyle: { color: '#f1f5f9' },
+        backgroundColor: ct.tooltipBg,
+        borderColor: ct.tooltipBorder,
+        textStyle: { color: ct.tooltipText },
         formatter: params => {
           const point = Array.isArray(params) ? params[0] : params;
           const row = visibleRows[point.dataIndex];
@@ -1984,18 +2637,18 @@
         type: 'category',
         boundaryGap: false,
         data: visibleRows.map(row => row.date),
-        axisLine: { lineStyle: { color: 'rgba(148,163,184,.35)' } },
-        axisLabel: { color: '#94a3b8', rotate: visibleRows.length > 14 ? 35 : 0 },
+        axisLine: { lineStyle: { color: ct.axisLine } },
+        axisLabel: { color: ct.axisText, rotate: visibleRows.length > 14 ? 35 : 0 },
         axisTick: { show: false },
       },
       yAxis: {
         type: 'value',
         scale: true,
         axisLabel: {
-          color: '#94a3b8',
+          color: ct.axisText,
           formatter: value => formatAmountByCurrency(value, displayCurrency),
         },
-        splitLine: { lineStyle: { color: 'rgba(255,255,255,.06)' } },
+        splitLine: { lineStyle: { color: ct.splitLine } },
         min: yAxisMin,
         max: yAxisMax,
       },
@@ -2023,7 +2676,7 @@
           symbol: 'none',
           silent: true,
           data: [{ yAxis: 0 }],
-          lineStyle: { color: 'rgba(148,163,184,.35)', type: 'dashed' },
+          lineStyle: { color: ct.markLine, type: 'dashed' },
         },
       }],
     }, { notMerge: true });
@@ -2102,13 +2755,15 @@
     
     // Clear chart or show skeleton for chart?
     if (allocationChart) {
+      const ct = getChartTheme();
       allocationChart.clear();
-      allocationChart.showLoading({ text: '加载中...', color: '#818cf8', textColor: '#94a3b8', maskColor: 'rgba(255,255,255,0.05)' });
+      allocationChart.showLoading({ text: '加载中...', color: '#818cf8', textColor: ct.loadingText, maskColor: ct.maskColor });
     }
 
     if (pnlHistoryChart) {
+      const ct = getChartTheme();
       pnlHistoryChart.clear();
-      pnlHistoryChart.showLoading({ text: '加载中...', color: '#818cf8', textColor: '#94a3b8', maskColor: 'rgba(255,255,255,0.05)' });
+      pnlHistoryChart.showLoading({ text: '加载中...', color: '#818cf8', textColor: ct.loadingText, maskColor: ct.maskColor });
     }
 
     const historyTableEl = document.getElementById('pnl-history-tbody');
@@ -2177,14 +2832,14 @@
     });
     document.getElementById('tbody').innerHTML = rows.length
       ? rows.join('')
-      : '<tr><td colspan="8" style="text-align:center;color:var(--muted)">暂无普通资产（USDT 已归为特殊类）</td></tr>';
+      : '<tr><td colspan="8" style="text-align:center;color:var(--muted)">暂无普通资产（USDT 已归为现金）</td></tr>';
 
     // Footer totals row
     const totalPL = getDisplayAmountByCurrency(pnlRmb, pnlUsd, displayCurrency);
     const totalPLp = getSummaryPnlPct();
     const totalMktVal = getDisplayAmountByCurrency(valuePoolRmb, valuePoolUsd, displayCurrency);
     const footerLeft = stableAssetSummary
-      ? `<span class="tfoot-special-badge">USDT 特殊类 · ${stableAssetSummary.totalBalance.toFixed(5)} · ${stableAssetSummary.valueText}</span>`
+      ? `<span class="tfoot-special-badge">USDT 现金 · ${stableAssetSummary.totalBalance.toFixed(5)} · ${stableAssetSummary.valueText}</span>`
       : '<span style="color:var(--muted)">合计</span>';
     document.getElementById('tfoot').innerHTML = `<tr>
       <td colspan="5" style="text-align:left">${footerLeft}</td>
@@ -2207,6 +2862,7 @@
     
     // Update chart
     if (allocationChart) {
+      const ct = getChartTheme();
       allocationChart.hideLoading();
       allocationChart.setOption({
         tooltip: {
@@ -2216,14 +2872,14 @@
             const ratio = Number.isFinite(Number(params.percent)) ? Number(params.percent).toFixed(2) : '--';
             return `${params.name}: ${formatAmountByCurrency(value, displayCurrency)} (${ratio}%)`;
           },
-          backgroundColor: 'rgba(8,8,18,0.9)',
-          borderColor: 'rgba(255,255,255,0.1)',
-          textStyle: { color: '#f1f5f9' },
+          backgroundColor: ct.tooltipBg,
+          borderColor: ct.tooltipBorder,
+          textStyle: { color: ct.tooltipText },
         },
         legend: {
           bottom: '0%',
           left: 'center',
-          textStyle: { color: '#94a3b8' },
+          textStyle: { color: ct.axisText },
           itemWidth: 10,
           itemHeight: 10
         },
@@ -2235,7 +2891,7 @@
             avoidLabelOverlap: false,
             itemStyle: {
               borderRadius: 6,
-              borderColor: '#080812',
+              borderColor: ct.pieBorder,
               borderWidth: 2
             },
             label: {
@@ -2247,7 +2903,7 @@
                 show: true,
                 fontSize: 16,
                 fontWeight: 'bold',
-                color: '#f1f5f9'
+                color: ct.pieText
               }
             },
             labelLine: {
@@ -2851,6 +3507,7 @@
     const visitedNames = resolveVisitedProvinceNames();
     travelMapChart = window.echarts.init(mapEl, null, { renderer: 'canvas' });
 
+    const ct = getChartTheme();
     travelMapChart.setOption({
       backgroundColor: 'transparent',
       tooltip: {
@@ -2866,8 +3523,8 @@
         zoom: 1.05,
         label: { show: false },
         itemStyle: {
-          areaColor: '#0f172a',
-          borderColor: 'rgba(148,163,184,.8)',
+          areaColor: ct.mapArea,
+          borderColor: ct.mapBorder,
           borderWidth: 1,
         },
         regions: visitedNames.map(name => ({
@@ -2885,7 +3542,7 @@
         })),
         emphasis: {
           label: { show: false },
-          itemStyle: { areaColor: '#1e293b' },
+          itemStyle: { areaColor: ct.mapEmphasis },
         },
       },
       series: [],
@@ -3059,6 +3716,7 @@
 
   initNotbot();
   renderTravelMap();
+  initCalendar();
 
   loadData();
   scheduleChartResize();

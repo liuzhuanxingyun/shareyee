@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(psql -d shareyee -c \"\\\\dt\")",
+      "Bash(psql -d shareyee -c ' *)",
+      "Bash(npm start *)",
+      "Bash(lsof -ti:3000)",
+      "Bash(xargs kill *)",
+      "Bash(curl -s http://localhost:3000/api/calendar/workouts)",
+      "Bash(curl -s http://localhost:3000/api/calendar/studies)",
+      "Bash(psql -d shareyee -c \"\\\\d pnl_history\")",
+      "Bash(psql -d shareyee -c \"\\\\d workout_log\")"
+    ]
+  }
+}

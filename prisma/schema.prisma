@@ -123,3 +123,33 @@ model PnlHistory {
   @@index([recordedAt])
   @@map("pnl_history")
 }
+
+// ============================================
+// 健身记录表
+// ============================================
+model WorkoutLog {
+  id        String   @id @default(cuid())
+  date      String   @unique // 日期，如 2026-03-25
+  exercises String   // 训练内容，如 "胸肌 · 俯卧撑 4组"
+  duration  Int?     // 训练时长(分钟)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+  @@map("workout_log")
+}
+
+// ============================================
+// 学习记录表
+// ============================================
+model StudyLog {
+  id        String   @id @default(cuid())
+  date      String   @unique // 日期，如 2026-03-25
+  subject   String   // 学习科目/内容，如 "英语 · 背单词 50个"
+  duration  Int?     // 学习时长(分钟)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+  @@map("study_log")
+}
