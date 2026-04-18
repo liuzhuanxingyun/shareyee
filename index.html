@@ -2731,10 +2731,11 @@
     statusEl.textContent = '卡池加载中…';
 
     try {
-      const response = await fetch('/data/notbot.cards.json', { cache: 'no-store' });
+      const response = await fetch('/api/notbot/cards', { cache: 'no-store' });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
       const payload = await response.json();
+      if (!payload?.success) throw new Error(payload?.error || 'API error');
       notbotRarityConfig = normalizeNotbotRarityConfig(payload?.rarityConfig);
 
       const cards = normalizeNotbotCards(payload?.cards, notbotRarityConfig);
@@ -2753,7 +2754,7 @@
       notbotRarityConfig = cloneDefaultNotbotRarityConfig();
       notbotCardsByRarity = buildNotbotCardPool([], notbotRarityConfig);
       renderNotbotProbabilities();
-      statusEl.textContent = '卡池加载失败，请检查 data/notbot.cards.json 配置';
+      statusEl.textContent = '卡池加载失败，请检查网络或稍后重试';
       drawBtn.disabled = true;
     }
 

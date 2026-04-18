@@ -12,7 +12,7 @@ datasource db {
 // ============================================
 // 投入池资金流水表
 // ============================================
-model CapitalFlow {
+model MoneyFlow {
   id           String   @id @default(cuid())
   orderId      String   @unique // 订单编号，防重复导入
   orderType    String   // Buy / Sell / Deposit / Withdraw
@@ -29,10 +29,11 @@ model CapitalFlow {
 
   @@index([occurredAt])
   @@index([status])
+  @@map("money_flow")
 }
 
 // 持仓项表
-model PortfolioItem {
+model CryptoItem {
   id              String          @id @default(cuid())
   label           String          // 显示标签
   ticker          String          // 股票/代币代码
@@ -47,12 +48,13 @@ model PortfolioItem {
 
   @@index([ticker])
   @@index([enabled])
+  @@map("crypto_item")
 }
 
 // ============================================
 // 稀有度配置表
 // ============================================
-model RarityConfig {
+model CardRarityConfig {
   id          String   @id @default(cuid())
   name        String   @unique // 稀有度名称：有趣、特别、惊喜、人生
   color       String   // 颜色代码
@@ -60,38 +62,42 @@ model RarityConfig {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  cards Card[]
+  cards CardItem[]
+
+  @@map("card_rarity_config")
 }
 
 // 卡片表
-model Card {
-  id         String       @id // 卡片 ID，如 NB-001
-  title      String       // 标题
-  text       String       // 描述
-  image      String       // 图片路径
-  rarityName String       // 外键字段
-  rarity     RarityConfig @relation(fields: [rarityName], references: [name])
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
+model CardItem {
+  id         String           @id // 卡片 ID，如 NB-001
+  title      String           // 标题
+  text       String           // 描述
+  image      String           // 图片路径
+  rarityName String           // 外键字段
+  rarity     CardRarityConfig @relation(fields: [rarityName], references: [name])
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
 
   @@index([rarityName])
+  @@map("card_item")
 }
 
 // ============================================
 // 操作记录表（买卖交易日志）
 // ============================================
 model TransactionLog {
-  id              String        @id @default(cuid())
-  portfolioItemId String
-  portfolioItem   PortfolioItem @relation(fields: [portfolioItemId], references: [id])
-  type            String        // Buy / Sell / Deposit / Withdraw
-  cost            Float         // 花费金额（USD）
-  occurredAt      DateTime      // 操作发生时间
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id         String     @id @default(cuid())
+  cryptoItemId String
+  cryptoItem   CryptoItem @relation(fields: [cryptoItemId], references: [id])
+  type       String     // Buy / Sell / Deposit / Withdraw
+  cost       Float      // 花费金额（USD）
+  occurredAt DateTime   // 操作发生时间
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 
-  @@index([portfolioItemId])
+  @@index([cryptoItemId])
   @@index([occurredAt])
+  @@map("transaction_log")
 }
 
 // ============================================
@@ -115,5 +121,5 @@ model PnlHistory {
 
   @@index([date])
   @@index([recordedAt])
+  @@map("pnl_history")
 }
-

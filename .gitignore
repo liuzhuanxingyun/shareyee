@@ -4,11 +4,9 @@ node_modules/
 data/portfolio.private.json
 !data/.gitkeep
 .github/agents/
-data/winOrNot/pnl-history.json
-data/pnl-history.json
 /assets
 .DS_Store
-data/notbot.cards.json
+/docs
 
 /generated/prisma
 scripts/import-capital-flow.mjs

@@ -593,20 +593,23 @@ function resolveWalletToken(item, tokenIndex) {
 
 async function loadPortfolio() {
   // 从数据库加载持仓配置
-  const items = await prisma.portfolioItem.findMany({
+  const items = await prisma.cryptoItem.findMany({
     where: { enabled: true },
     orderBy: { sortOrder: 'asc' }
   });
 
-  // 从 CapitalFlow 汇总计算当前总投入（仅 Completed）
-  const aggregate = await prisma.capitalFlow.aggregate({
-    _sum: { fiatAmount: true },
-    where: { status: 'Completed' }
-  });
-  const capitalRmb = aggregate._sum.fiatAmount ?? null;
+  // 从 MoneyFlow 汇总计算当前总投入（仅 Completed）
+  const [aggregate] = await prisma.$queryRaw`
+    SELECT COALESCE(SUM("fiatAmount"), 0) as "fiatAmount", COALESCE(SUM("assetAmount"), 0) as "assetAmount"
+    FROM "money_flow"
+    WHERE status = 'Completed'
+  `;
+  const capitalRmb = Number(aggregate?.fiatAmount) || null;
+  const capitalUsd = Number(aggregate?.assetAmount) || null;
 
   return {
     capitalRmb,
+    capitalUsd,
     items: items.map(item => ({
       label: item.label,
       ticker: item.ticker,
@@ -661,18 +664,20 @@ async function buildPortfolioReport() {
       chain: WEB3_CHAIN,
     });
 
-    const price = isUsdtLikeAsset(item, walletToken)
+    const isCash = isUsdtLikeAsset(item, walletToken);
+    const price = isCash
       ? 1
       : await stooqPrice(item.ticker).catch(() => null);
     const marketValue = balance !== null && price !== null
       ? price * balance
       : null;
-    const avg = balance !== null && balance > 0 ? item.cost / balance : null;
-    const pnl = marketValue !== null ? marketValue - item.cost : null;
+    const avg = !isCash && balance !== null && balance > 0 ? item.cost / balance : null;
+    const pnl = !isCash && marketValue !== null ? marketValue - item.cost : null;
     const pnlPct = pnl !== null && item.cost > 0 ? (pnl / item.cost) * 100 : null;
 
     return {
       ...item,
+      isCash,
       balance,
       avg,
       price,
@@ -687,7 +692,7 @@ async function buildPortfolioReport() {
       usdValue24hPercentChange: toNumberOrNull(walletToken?.usd_price_24hr_percent_change),
       portfolioPercentage: toNumberOrNull(walletToken?.portfolio_percentage),
       balanceSource: walletToken ? 'wallet' : legacyBalance !== null ? 'legacy' : 'unknown',
-      priceSource: isUsdtLikeAsset(item, walletToken)
+      priceSource: isCash
         ? 'par'
         : (price !== null ? 'stooq' : 'unknown'),
       balanceDisplay: formatQuantity(balance),
@@ -699,20 +704,19 @@ async function buildPortfolioReport() {
   const valuePoolUsd = walletSyncStatus === 'error' && !hasResolvedBalances
     ? null
     : rows.reduce((sum, row) => sum + (row.marketValue || 0), 0);
+  const valuePoolRmb = valuePoolUsd !== null && forexRate ? valuePoolUsd * forexRate : null;
+  const costBasisUsd = rows.reduce((sum, row) => sum + (row.isCash ? 0 : (Number.isFinite(row.cost) ? row.cost : 0)), 0);
+  const inputPoolUsd = Number.isFinite(portfolioDefinition.capitalUsd)
+    ? portfolioDefinition.capitalUsd
+    : (forexRate && Number.isFinite(portfolioDefinition.capitalRmb) ? portfolioDefinition.capitalRmb / forexRate : null);
   const inputPoolRmb = Number.isFinite(portfolioDefinition.capitalRmb)
     ? portfolioDefinition.capitalRmb
-    : (forexRate && Number.isFinite(legacyInputPoolUsd) ? legacyInputPoolUsd * forexRate : null);
-  const inputPoolUsd = Number.isFinite(portfolioDefinition.capitalRmb)
-    ? (forexRate ? portfolioDefinition.capitalRmb / forexRate : null)
-    : legacyInputPoolUsd;
-  const valuePoolRmb = valuePoolUsd !== null && forexRate ? valuePoolUsd * forexRate : null;
-  const hasPnlRows = rows.some(row => Number.isFinite(row.pnl));
-  const costBasisUsd = rows.reduce((sum, row) => sum + (Number.isFinite(row.cost) ? row.cost : 0), 0);
-  const pnlUsd = hasPnlRows
-    ? rows.reduce((sum, row) => sum + (Number.isFinite(row.pnl) ? row.pnl : 0), 0)
+    : (forexRate && Number.isFinite(portfolioDefinition.capitalUsd) ? portfolioDefinition.capitalUsd * forexRate : null);
+  const pnlUsd = valuePoolUsd !== null && inputPoolUsd !== null
+    ? valuePoolUsd - inputPoolUsd
     : null;
   const pnlRmb = pnlUsd !== null && forexRate ? pnlUsd * forexRate : null;
-  const pnlPct = pnlUsd !== null && costBasisUsd > 0 ? (pnlUsd / costBasisUsd) * 100 : null;
+  const pnlPct = pnlUsd !== null && inputPoolUsd > 0 ? (pnlUsd / inputPoolUsd) * 100 : null;
 
   return {
     rows,
@@ -1076,6 +1080,48 @@ app.get('/api/china-map', async (_req, res) => {
     success: false,
     error: 'All china map sources unavailable',
   });
+});
+
+// ─── GET /api/notbot/cards ────────────────────────────────────────────────
+async function loadNotbotCards() {
+  const rarities = await prisma.cardRarityConfig.findMany({
+    orderBy: { probability: 'asc' },
+    include: { cards: true },
+  });
+
+  const rarityConfig = {};
+  const cards = [];
+
+  for (const r of rarities) {
+    rarityConfig[r.name] = { color: r.color, probability: r.probability };
+    for (const c of r.cards) {
+      cards.push({
+        id: c.id,
+        title: c.title,
+        text: c.text,
+        image: c.image,
+        rarity: c.rarityName,
+      });
+    }
+  }
+
+  return { rarityConfig, cards };
+}
+
+app.get('/api/notbot/cards', async (_req, res) => {
+  try {
+    const data = await loadNotbotCards();
+    res.json({
+      success: true,
+      rarityConfig: data.rarityConfig,
+      cards: data.cards,
+      source: 'database',
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error('[notbot]', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // ─── GET /api/mail/send-now ───────────────────────────────────────────────
