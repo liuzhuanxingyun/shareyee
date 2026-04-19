@@ -50,6 +50,14 @@ if [ ! -f .env ]; then
 fi
 echo "✅ .env 已配置"
 
+# 5.5 加载 .env 到环境变量（Prisma CLI 需要）
+echo "📦 加载环境变量..."
+while IFS='=' read -r key value; do
+    key=$(echo "$key" | sed 's/[[:space:]]//g')
+    [[ -z "$key" || "$key" =~ ^# ]] && continue
+    export "$key=$value"
+done < .env
+
 # 6. Prisma
 echo "📦 Prisma generate..."
 npx prisma generate
