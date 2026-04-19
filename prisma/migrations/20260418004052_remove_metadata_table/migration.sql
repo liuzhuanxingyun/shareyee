@@ -1,2 +1,2 @@
 -- DropTable
-DROP TABLE "Metadata";
+DROP TABLE IF EXISTS "Metadata";

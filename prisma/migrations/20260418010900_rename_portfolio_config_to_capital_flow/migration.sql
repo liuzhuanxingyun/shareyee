@@ -1,5 +1,5 @@
 -- DropTable
-DROP TABLE "PortfolioConfig";
+DROP TABLE IF EXISTS "PortfolioConfig";
 
 -- CreateTable
 CREATE TABLE "CapitalFlow" (
