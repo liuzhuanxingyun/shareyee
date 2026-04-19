@@ -15,14 +15,14 @@ datasource db {
 model MoneyFlow {
   id           String   @id @default(cuid())
   orderId      String   @unique // 订单编号，防重复导入
-  orderType    String   // Buy / Sell / Deposit / Withdraw
-  asset        String   // 资产代码：USDT / CNY
-  fiatCurrency String   // 法币代码：CNY
-  fiatAmount   Float    // 总价格（法币金额）
-  unitPrice    Float    // 单价
-  assetAmount  Float    // 数量（资产金额）
-  counterparty String?  // 交易对手，可选
-  status       String   // Completed / Cancelled
+  orderType    String // Buy / Sell / Deposit / Withdraw
+  asset        String // 资产代码：USDT / CNY
+  fiatCurrency String // 法币代码：CNY
+  fiatAmount   Float // 总价格（法币金额）
+  unitPrice    Float // 单价
+  assetAmount  Float // 数量（资产金额）
+  counterparty String? // 交易对手，可选
+  status       String // Completed / Cancelled
   occurredAt   DateTime // 交易发生时间
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -34,16 +34,16 @@ model MoneyFlow {
 
 // 持仓项表
 model CryptoItem {
-  id              String          @id @default(cuid())
-  label           String          // 显示标签
-  ticker          String          // 股票/代币代码
-  cost            Float           // 投入成本
-  enabled         Boolean         @default(true) // 是否启用
-  shares          Float?          // 持股数（可选）
-  contractAddress String?         // 合约地址（可选，用于加密货币）
-  sortOrder       Int             @default(0) // 排序字段
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  id              String           @id @default(cuid())
+  label           String // 显示标签
+  ticker          String // 股票/代币代码
+  cost            Float // 投入成本
+  enabled         Boolean          @default(true) // 是否启用
+  shares          Float? // 持股数（可选）
+  contractAddress String? // 合约地址（可选，用于加密货币）
+  sortOrder       Int              @default(0) // 排序字段
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
   transactions    TransactionLog[]
 
   @@index([ticker])
@@ -57,8 +57,8 @@ model CryptoItem {
 model CardRarityConfig {
   id          String   @id @default(cuid())
   name        String   @unique // 稀有度名称：有趣、特别、惊喜、人生
-  color       String   // 颜色代码
-  probability Float    // 概率百分比
+  color       String // 颜色代码
+  probability Float // 概率百分比
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -70,10 +70,10 @@ model CardRarityConfig {
 // 卡片表
 model CardItem {
   id         String           @id // 卡片 ID，如 NB-001
-  title      String           // 标题
-  text       String           // 描述
-  image      String           // 图片路径
-  rarityName String           // 外键字段
+  title      String // 标题
+  text       String // 描述
+  image      String // 图片路径
+  rarityName String // 外键字段
   rarity     CardRarityConfig @relation(fields: [rarityName], references: [name])
   createdAt  DateTime         @default(now())
   updatedAt  DateTime         @updatedAt
@@ -86,14 +86,14 @@ model CardItem {
 // 操作记录表（买卖交易日志）
 // ============================================
 model TransactionLog {
-  id         String     @id @default(cuid())
+  id           String     @id @default(cuid())
   cryptoItemId String
   cryptoItem   CryptoItem @relation(fields: [cryptoItemId], references: [id])
-  type       String     // Buy / Sell / Deposit / Withdraw
-  cost       Float      // 花费金额（USD）
-  occurredAt DateTime   // 操作发生时间
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+  type         String // Buy / Sell / Deposit / Withdraw
+  cost         Float // 花费金额（USD）
+  occurredAt   DateTime // 操作发生时间
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
   @@index([cryptoItemId])
   @@index([occurredAt])
@@ -107,14 +107,14 @@ model PnlHistory {
   id               String   @id @default(cuid())
   date             String   @unique // 日期，如 2026-03-25
   recordedAt       DateTime // 记录时间戳
-  timezone         String   // 时区
-  trigger          String   // 触发来源：cron/manual
-  totalCost        Float?   // 总成本
-  totalMarketValue Float?   // 总市值
-  totalPnl         Float?   // 总盈亏
-  totalPnlPct      Float?   // 盈亏百分比
-  totalPnlCny      Float?   // 盈亏人民币
-  forexRate        Float?   // 汇率
+  timezone         String // 时区
+  trigger          String // 触发来源：cron/manual
+  totalCost        Float? // 总成本
+  totalMarketValue Float? // 总市值
+  totalPnl         Float? // 总盈亏
+  totalPnlPct      Float? // 盈亏百分比
+  totalPnlCny      Float? // 盈亏人民币
+  forexRate        Float? // 汇率
   win              Boolean  @default(false) // 是否盈利
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -130,8 +130,8 @@ model PnlHistory {
 model WorkoutLog {
   id        String   @id @default(cuid())
   date      String   @unique // 日期，如 2026-03-25
-  exercises String   // 训练内容，如 "胸肌 · 俯卧撑 4组"
-  duration  Int?     // 训练时长(分钟)
+  exercises String // 训练内容，如 "胸肌 · 俯卧撑 4组"
+  duration  Int? // 训练时长(分钟)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -145,8 +145,8 @@ model WorkoutLog {
 model StudyLog {
   id        String   @id @default(cuid())
   date      String   @unique // 日期，如 2026-03-25
-  subject   String   // 学习科目/内容，如 "英语 · 背单词 50个"
-  duration  Int?     // 学习时长(分钟)
+  subject   String // 学习科目/内容，如 "英语 · 背单词 50个"
+  duration  Int? // 学习时长(分钟)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

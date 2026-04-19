@@ -1,8 +1,5 @@
--- DropTable
-DROP TABLE IF EXISTS "PortfolioConfig";
-
 -- CreateTable
-CREATE TABLE "CapitalFlow" (
+CREATE TABLE "money_flow" (
     "id" TEXT NOT NULL,
     "orderId" TEXT NOT NULL,
     "orderType" TEXT NOT NULL,
@@ -17,14 +14,14 @@ CREATE TABLE "CapitalFlow" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "CapitalFlow_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "money_flow_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "CapitalFlow_orderId_key" ON "CapitalFlow"("orderId");
+CREATE UNIQUE INDEX "money_flow_orderId_key" ON "money_flow"("orderId");
 
 -- CreateIndex
-CREATE INDEX "CapitalFlow_occurredAt_idx" ON "CapitalFlow"("occurredAt");
+CREATE INDEX "money_flow_occurredAt_idx" ON "money_flow"("occurredAt");
 
 -- CreateIndex
-CREATE INDEX "CapitalFlow_status_idx" ON "CapitalFlow"("status");
+CREATE INDEX "money_flow_status_idx" ON "money_flow"("status");
