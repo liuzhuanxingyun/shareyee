@@ -1,35 +1,49 @@
-# shareyee
+# Shareyee
 
-[![Live Site](https://img.shields.io/badge/Live-shareyee.duckdns.org-2ea44f?style=flat-square)](http://shareyee.duckdns.org)
+曾展鹏的个人作品集与投资看板。
 
-在线访问: [http://shareyee.duckdns.org](http://shareyee.duckdns.org)
+## 快速开始
 
-## 1. 多板块
+### 1. 安装 PostgreSQL
 
-- 个人信息: 曾展鹏 / David Zeng / GDUT 大三在读
-- 投资看板: 只读钱包、占比环形图、盈亏、新闻、定时邮件
-- 兴趣生活: 一首歌，和一张到访省份地图
+- Windows: 下载 [PostgreSQL 安装包](https://www.postgresql.org/download/windows/)
+- 或使用 Docker: `docker run -d --name postgres -p 5432:5432 -e POSTGRES_PASSWORD=password postgres`
 
-## 2. 运行规则
+### 2. 创建数据库
 
-- 环境: Node.js 18+（建议 Node.js 20+）+ npm
-- 启动: `npm install` 然后 `npm start`
-- 文件说明:
-  - `data/portfolio.private.json`: 私有持仓文件，已加入 `.gitignore`
-  - `data/portfolio.example.json`: 持仓模板文件
-  - `.env`: 本地环境变量文件，用来放端口、接口密钥等配置
-  - `.env.example`: 本地环境变量模板文件
-  
-## 3. 预备功能
+```bash
+psql -U postgres
+CREATE DATABASE shareyee;
+```
 
+### 3. 配置环境变量
 
-- 重构计划 问hugh如果重构整个项目会选择什么技术栈
-- 工作机会板块
-- 整个样式大改动，现在ai味道太重了
+创建 `.env` 文件：
 
-计划：
-4.13 50+26.43161+52.5250645 ✅
-4.20 50+52.5250645
-4.27 50
+```
+DATABASE_URL="postgresql://postgres:password@localhost:5432/shareyee"
+```
 
+### 4. 安装依赖并初始化数据库
 
+```bash
+npm install
+npm run db:migrate    # 运行数据库迁移
+npm run db:generate   # 生成 Prisma Client
+npm start
+```
+
+访问 http://localhost:3000
+
+## 文档
+
+- [项目说明](docs/README.md)
+- [架构文档](docs/ARCHITECTURE.md)
+- [VPS 部署指南](docs/VNC部署指南.md)
+
+## 功能
+
+- 个人信息展示
+- 投资看板（钱包同步、盈亏统计、定时邮件）
+- 兴趣生活（音乐、地图）
+- 日历板块（健身、学习记录）

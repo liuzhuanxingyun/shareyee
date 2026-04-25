@@ -171,7 +171,7 @@ npx prisma migrate deploy
 
 # 8. PM2 启动
 echo "🚀 启动应用..."
-pm2 restart ecosystem.config.cjs 2>/dev/null || pm2 start ecosystem.config.cjs
+pm2 restart scripts/ecosystem.config.cjs 2>/dev/null || pm2 start scripts/ecosystem.config.cjs
 pm2 save
 
 # 9. 完成

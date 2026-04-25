@@ -1,13 +1,30 @@
+# Node
 node_modules/
+
+# 环境变量
 .env
+
+# 日志
 *.log
+
+# 数据文件
 data/portfolio.private.json
 !data/.gitkeep
-.github/agents/
-/assets
-.DS_Store
-/docs
 
+# Prisma 生成
 /generated/prisma
+
+# 系统文件
+.DS_Store
+
+# Claude
+.claude
+.github/agents/
+
+# 文档（如果不想提交）
+/docs
+/assets
+
+# 临时导入脚本和数据
 scripts/import-capital-flow.mjs
-Binance-C2C-订单历史记录-202604171645(UTC+8).csv
+*.csv
