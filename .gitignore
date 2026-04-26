@@ -25,6 +25,9 @@ data/portfolio.private.json
 /docs
 /assets
 
+# 抽卡图片（不上传）
+/public/assets/img/notbot/
+
 # 临时导入脚本和数据
 scripts/import-capital-flow.mjs
 *.csv

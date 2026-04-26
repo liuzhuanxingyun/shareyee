@@ -16,7 +16,7 @@ let walletTokenCache = { at: 0, tokens: [] };
 let walletTokenPromise = null;
 
 // Stooq 股价查询
-const STOOQ_MAP = { UBER: 'uber.us', TQQQ: 'tqqq.us', COIN: 'coin.us', BABA: 'baba.us' };
+const STOOQ_MAP = { UBER: 'uber.us', TQQQ: 'tqqq.us', COIN: 'coin.us', BABA: 'baba.us', PDD: 'pdd.us' };
 
 export async function stooqPrice(ticker) {
   const sym = STOOQ_MAP[ticker] ?? ticker.toLowerCase() + '.us';
@@ -193,9 +193,11 @@ export async function loadPortfolio() {
     SELECT COALESCE(SUM("fiatAmount"), 0) as "fiatAmount", COALESCE(SUM("assetAmount"), 0) as "assetAmount"
     FROM "money_flow"
     WHERE status = 'Completed'
+      AND orderType IN ('Buy', 'Deposit')
   `;
   const capitalRmb = Number(aggregate?.fiatAmount) || null;
-  const capitalUsd = Number(aggregate?.assetAmount) || null;
+  // capitalUsd 由 portfolio.js 根据汇率计算，这里不返回
+  const capitalUsd = null;
 
   return {
     capitalRmb,

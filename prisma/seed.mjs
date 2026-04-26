@@ -1,9 +1,9 @@
 import 'dotenv/config';
-import { prisma } from '../lib/prisma.js';
+import { prisma } from '../src/lib/prisma.js';
 
 const data = {
   "version": 1,
-  "updatedAt": "2026-04-05",
+  "updatedAt": "2026-04-26",
   "rarityConfig": {
     "有趣": {
       "color": "#22c55e",
@@ -25,31 +25,59 @@ const data = {
   "cards": [
     {
       "id": "NB-001",
-      "title": "来到长城",
-      "text": "有道是：不到长城非好汉。今日来此，一眼千年",
-      "image": "assets/img/notbot/IMG_4945.jpeg",
-      "rarity": "人生"
+      "title": "吃饭",
+      "text": "和同事吃饭",
+      "image": "assets/img/notbot/NB-001.jpg",
+      "rarity": "有趣"
     },
     {
       "id": "NB-002",
-      "title": "黑脸奶龙",
-      "text": "一只在商场发现的黑脸奶龙，看来深受孩子欢迎",
-      "image": "assets/img/notbot/IMG_3967.jpeg",
+      "title": "划船",
+      "text": "在猎德看到的，第一次看到有人玩这种运动",
+      "image": "assets/img/notbot/NB-002.jpg",
       "rarity": "有趣"
     },
     {
       "id": "NB-003",
-      "title": "小狗",
-      "text": "一只偶尔遇见的小狗，眼神中透露出一丝忧郁",
-      "image": "assets/img/notbot/IMG_5518.jpeg",
-      "rarity": "特别"
+      "title": "无人驾驶",
+      "text": "打了一辆车外出，但是似乎没有司机......",
+      "image": "assets/img/notbot/NB-003.jpg",
+      "rarity": "有趣"
     },
     {
       "id": "NB-004",
-      "title": "摔跤",
-      "text": "摔了个大的，脑袋晕乎乎的",
-      "image": "assets/img/notbot/IMG_5837.jpeg",
+      "title": "低空经济",
+      "text": "听说可以从大学城回肇庆只需要200多......",
+      "image": "assets/img/notbot/NB-004.jpg",
       "rarity": "有趣"
+    },
+    {
+      "id": "NB-005",
+      "title": "加班夜",
+      "text": "好像是第一次加班到这么晚",
+      "image": "assets/img/notbot/NB-005.jpg",
+      "rarity": "有趣"
+    },
+    {
+      "id": "NB-006",
+      "title": "小狗",
+      "text": "它不属于我，它只是刚好经过",
+      "image": "assets/img/notbot/NB-006.jpg",
+      "rarity": "特别"
+    },
+    {
+      "id": "NB-007",
+      "title": "来到长城",
+      "text": "终于到达了，我也是好汉了......吗？",
+      "image": "assets/img/notbot/NB-007.jpg",
+      "rarity": "惊喜"
+    },
+    {
+      "id": "NB-008",
+      "title": "超英派遣中心",
+      "text": "一种忽然找到良作的欣喜油然而生，可惜流程太短，首发居然还不是完整内容",
+      "image": "assets/img/notbot/NB-008.jpg",
+      "rarity": "特别"
     }
   ]
 };

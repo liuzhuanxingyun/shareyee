@@ -39,19 +39,7 @@ ALTER INDEX "TransactionLog_occurredAt_idx" RENAME TO "transaction_log_occurredA
 ALTER INDEX "TransactionLog_pkey" RENAME TO "transaction_log_pkey";
 ALTER INDEX "TransactionLog_portfolioItemId_idx" RENAME TO "transaction_log_cryptoItemId_idx";
 
--- Rename constraints on crypto_item
-ALTER TABLE "crypto_item" RENAME CONSTRAINT "PortfolioItem_pkey" TO "crypto_item_pkey";
-
--- Rename constraints on card_rarity_config
-ALTER TABLE "card_rarity_config" RENAME CONSTRAINT "RarityConfig_pkey" TO "card_rarity_config_pkey";
-
--- Rename constraints on card_item
-ALTER TABLE "card_item" RENAME CONSTRAINT "Card_pkey" TO "card_item_pkey";
+-- Note: Primary key constraints are already renamed via index renames above
+-- Rename foreign key constraints only
 ALTER TABLE "card_item" RENAME CONSTRAINT "Card_rarityName_fkey" TO "card_item_rarityName_fkey";
-
--- Rename constraints on pnl_history
-ALTER TABLE "pnl_history" RENAME CONSTRAINT "PnlHistory_pkey" TO "pnl_history_pkey";
-
--- Rename constraints on transaction_log
-ALTER TABLE "transaction_log" RENAME CONSTRAINT "TransactionLog_pkey" TO "transaction_log_pkey";
 ALTER TABLE "transaction_log" RENAME CONSTRAINT "TransactionLog_portfolioItemId_fkey" TO "transaction_log_cryptoItemId_fkey";
