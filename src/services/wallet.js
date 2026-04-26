@@ -6,7 +6,7 @@ import { normalizeAddress, normalizeLookupKey } from '../utils/text.js';
 import { toNumberOrNull } from '../utils/format.js';
 import { tokenLogoRegistry } from './token-logo.js';
 
-export const WEB3_WALLET_ADDRESS = process.env.WEB3_WALLET_ADDRESS || process.env.WALLET_ADDRESS || '0x5920efce45f6221f33c6923aa4e25951357389ca';
+export const WEB3_WALLET_ADDRESS = process.env.WEB3_WALLET_ADDRESS || process.env.WALLET_ADDRESS || '';
 export const WEB3_CHAIN = process.env.WEB3_CHAIN || 'bsc';
 export const MORALIS_API_KEY = process.env.MORALIS_API_KEY || '';
 export const MORALIS_BASE_URL = 'https://deep-index.moralis.io/api/v2.2';

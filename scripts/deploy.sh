@@ -81,7 +81,7 @@ fi
 # 3. 配置数据库（创建用户、数据库、授权）
 setup_database() {
     DB_USER="shareyee"
-    DB_PASS="Shareyee_DB_9527"
+    DB_PASS=$(openssl rand -base64 12 | tr -dc "a-zA-Z0-9" | head -c 16)
     DB_NAME="shareyee"
 
     echo "📦 正在配置数据库..."
@@ -135,7 +135,7 @@ MAIL_TO=接收邮箱@qq.com
 MAIL_TEST_TOKEN=abc123xyz789
 
 # 钱包同步
-WEB3_WALLET_ADDRESS=0x5920efce45f6221f33c6923aa4e25951357389ca
+WEB3_WALLET_ADDRESS=
 WEB3_CHAIN=bsc
 MORALIS_API_KEY=你的Moralis_API_Key
 WEB3_CACHE_TTL_MS=60000
