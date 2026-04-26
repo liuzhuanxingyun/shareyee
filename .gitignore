@@ -21,3 +21,5 @@ node_modules/
 
 # CSV文件
 *.csv
+
+nginx-shareyee.conf
