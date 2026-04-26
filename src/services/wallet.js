@@ -193,7 +193,7 @@ export async function loadPortfolio() {
     SELECT COALESCE(SUM("fiatAmount"), 0) as "fiatAmount", COALESCE(SUM("assetAmount"), 0) as "assetAmount"
     FROM "money_flow"
     WHERE status = 'Completed'
-      AND orderType IN ('Buy', 'Deposit')
+      AND "orderType" IN ('Buy', 'Deposit')
   `;
   const capitalRmb = Number(aggregate?.fiatAmount) || null;
   // capitalUsd 由 portfolio.js 根据汇率计算，这里不返回
